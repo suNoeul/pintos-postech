@@ -23,6 +23,7 @@
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
+static struct list sleep_list; /*dudu*/
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
@@ -70,6 +71,8 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
+
+bool ticks_less_than (const struct list_elem *a, const struct list_elem *b, void *aux) /*dudu*/
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -578,6 +581,27 @@ allocate_tid (void)
 
   return tid;
 }
+
+void thread_sleep(int64_t wake_tick){
+  old_level = intr_disable();
+  struct thread* current_thread = thread_current();
+  current_thread->wait_ticks = wait_tick;
+  list_insert_ordered(sleep_list, current_thread, ticks_less_than, NULL);
+  thread_block();
+  intr_set_level(old_level);
+}
+
+bool ticks_less_than (const struct list_elem *a, const struct list_elem *b, void *aux) {
+  return a->wait_ticks < b->wait_ticks;
+}
+
+void thread_checkWaketicksAndWakeup(int64_t current_ticks){
+  if(current_ticks == sleep_list.begin -> wait_ticks) {
+    thread_unblock(list_pop_front(sleep_list));
+  }
+}
+
+
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
