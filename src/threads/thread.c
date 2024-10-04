@@ -222,7 +222,7 @@ void thread_awake(int64_t ticks)
     struct thread *t = list_entry(cur_elem, struct thread, elem);
     
     if (t->alarmTick <= ticks){
-      cur_elem = list_remove(&sleep_list);
+      cur_elem = list_remove(cur_elem);
       thread_unblock(t);
     }
     else break;    
