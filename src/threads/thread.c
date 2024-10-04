@@ -72,8 +72,6 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
-bool ticks_less_than (const struct list_elem *a, const struct list_elem *b, void *aux) /*dudu*/
-
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -95,6 +93,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  list_init (&sleep_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -583,21 +582,24 @@ allocate_tid (void)
 }
 
 void thread_sleep(int64_t wake_tick){
+  enum intr_level old_level;
   old_level = intr_disable();
   struct thread* current_thread = thread_current();
-  current_thread->wait_ticks = wait_tick;
-  list_insert_ordered(sleep_list, current_thread, ticks_less_than, NULL);
+  current_thread->wake_ticks = wake_tick;
+  list_insert_ordered(&sleep_list, &current_thread->elem, ticks_less_than, NULL);
   thread_block();
   intr_set_level(old_level);
 }
 
 bool ticks_less_than (const struct list_elem *a, const struct list_elem *b, void *aux) {
-  return a->wait_ticks < b->wait_ticks;
+  struct thread *thread_a = list_entry(a, struct thread, elem);
+  struct thread *thread_b = list_entry(b, struct thread, elem);
+  return thread_a->wake_ticks < thread_b->wake_ticks;
 }
 
 void thread_checkWaketicksAndWakeup(int64_t current_ticks){
-  if(current_ticks == sleep_list.begin -> wait_ticks) {
-    thread_unblock(list_pop_front(sleep_list));
+  if(current_ticks == list_entry(list_begin(&sleep_list), struct thread, elem) -> wake_ticks) {
+    thread_unblock(list_entry(list_pop_front(&sleep_list), struct thread, elem));
   }
 }
 
