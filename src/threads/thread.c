@@ -598,9 +598,14 @@ bool ticks_less_than (const struct list_elem *a, const struct list_elem *b, void
 }
 
 void thread_checkWaketicksAndWakeup(int64_t current_ticks){
-  if(current_ticks == list_entry(list_begin(&sleep_list), struct thread, elem) -> wake_ticks) {
-    thread_unblock(list_entry(list_pop_front(&sleep_list), struct thread, elem));
-  }
+  while (!list_empty(&sleep_list)) {
+        struct thread *t = list_entry(list_begin(&sleep_list), struct thread, elem);
+        if (t->wake_ticks > current_ticks) {
+            break;
+        }
+        list_pop_front(&sleep_list);
+        thread_unblock(t);
+    }
 }
 
 
