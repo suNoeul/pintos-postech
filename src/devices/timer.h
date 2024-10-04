@@ -26,5 +26,4 @@ void timer_ndelay (int64_t nanoseconds);
 
 void timer_print_stats (void);
 
-void git_test_branch_snow(void); // just_test case
 #endif /* devices/timer.h */

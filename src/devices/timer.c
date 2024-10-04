@@ -84,16 +84,17 @@ timer_elapsed (int64_t then)
   return timer_ticks () - then;
 }
 
-/* Sleeps for approximately TICKS timer ticks.  Interrupts must
-   be turned on. */
-void
-timer_sleep (int64_t ticks) 
+/* Sleeps for approximately TICKS timer ticks.  Interrupts must be turned on. */
+void timer_sleep (int64_t ticks) 
 {
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  thread_sleep(start + ticks);
+
+  /* Implementation method: Busy wait version */
+      // while (timer_elapsed (start) < ticks) 
+      // thread_yield ()
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -172,6 +173,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+  thread_awake(ticks);
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
@@ -243,8 +245,4 @@ real_time_delay (int64_t num, int32_t denom)
      the possibility of overflow. */
   ASSERT (denom % 1000 == 0);
   busy_wait (loops_per_tick * num / 1000 * TIMER_FREQ / (denom / 1000)); 
-}
-
-void git_test_branch_snow(void){
-  
 }
