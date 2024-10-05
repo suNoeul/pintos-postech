@@ -200,7 +200,9 @@ lock_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
-
+  if (lock->holder != NULL && thread_current()->priority > lock->holder->priority) {
+    donate_priority(thread_current(), lock);
+  }
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
 }
@@ -237,6 +239,7 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   lock->holder = NULL;
+  recover_priority(thread_current());
   sema_up (&lock->semaphore);
 }
 
@@ -350,3 +353,40 @@ bool priority_more_than_in_semaphore(const struct list_elem *a, const struct lis
   struct thread *thread_b = list_entry(list_begin(&sema_b->semaphore.waiters), struct thread, elem);
   return thread_a->priority > thread_b->priority;
 }
+
+void donate_priority(struct thread *donor, struct lock *lock) {
+  struct thread *holder = lock->holder;
+  if (holder != NULL && donor->priority > holder->priority) {
+      list_insert_ordered(&holder->donations, &donor->donation_elem, priority_more_than_in_thread,NULL);
+      holder->is_donated = true;
+      holder->priority = donor->priority;
+      if (holder->wish_lock != NULL) {
+          donate_priority(holder, holder->wish_lock);
+      }
+  }
+}
+
+void recover_priority(struct thread *current) {
+    if (current->is_donated) {
+        current->is_donated = false;
+        current->priority = current->origin_priority;
+        struct list_elem *cur = list_begin(&current->donations);
+        while (cur != list_end(&current->donations)) {
+          struct thread *donor = list_entry(cur, struct thread, donation_elem);
+          if (donor->wish_lock == current->wish_lock) {
+              cur = list_remove(cur);
+          } else {
+              cur = list_next(cur);
+          }
+        }
+        if (!list_empty(&current->donations)) {
+            struct thread *highest_donor =  list_entry(list_begin(&current->donations), struct thread, donation_elem);
+            if (highest_donor != NULL && highest_donor->priority > current->priority) {
+                current->priority = highest_donor->priority;
+                current->is_donated = true;
+            }
+        }
+    }
+}
+
+
