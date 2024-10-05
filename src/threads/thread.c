@@ -202,6 +202,7 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+  thread_check_priority_and_yield();
 
   return tid;
 }
@@ -239,7 +240,9 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  
+  list_insert_ordered(&ready_list, &t->elem, priority_less_than_in_thread, NULL);
+
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -310,7 +313,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    list_insert_ordered(&ready_list, &cur->elem, priority_less_than_in_thread, NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -338,6 +341,7 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  thread_check_priority_and_yield();
 }
 
 /* Returns the current thread's priority. */
@@ -495,7 +499,7 @@ next_thread_to_run (void)
   if (list_empty (&ready_list))
     return idle_thread;
   else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+    return list_entry (list_pop_back (&ready_list), struct thread, elem);
 }
 
 /* Completes a thread switch by activating the new thread's page
@@ -599,14 +603,31 @@ bool ticks_less_than (const struct list_elem *a, const struct list_elem *b, void
 
 void thread_checkWaketicksAndWakeup(int64_t current_ticks){
   while (!list_empty(&sleep_list)) {
-        struct thread *t = list_entry(list_begin(&sleep_list), struct thread, elem);
-        if (t->wake_ticks > current_ticks) {
-            break;
-        }
-        list_pop_front(&sleep_list);
-        thread_unblock(t);
+    struct thread *wake_thread = list_entry(list_begin(&sleep_list), struct thread, elem);
+    if (wake_thread->wake_ticks > current_ticks) {
+        break;
     }
+    list_pop_front(&sleep_list);
+    thread_unblock(wake_thread);
+    thread_check_priority_and_yield();
+  }
 }
+
+bool priority_less_than_in_thread (const struct list_elem *a, const struct list_elem *b, void *aux) {
+  struct thread *thread_a = list_entry(a, struct thread, elem);
+  struct thread *thread_b = list_entry(b, struct thread, elem);
+  return thread_a->priority < thread_b->priority;
+}
+
+void thread_check_priority_and_yield(void) {
+  if (thread_current() != idle_thread && !list_empty(&ready_list)) {
+    struct thread *current_thread = thread_current();
+    struct thread *most_priority_in_ready_list = list_entry(list_back(&ready_list), struct thread, elem);
+    if(current_thread->priority < most_priority_in_ready_list->priority) 
+      thread_yield();
+  }
+}
+
 
 
 

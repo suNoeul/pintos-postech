@@ -133,6 +133,8 @@ void thread_yield (void);
 /*defined by dudu(thread.c)*/
 void thread_sleep(int64_t wake_tick);
 void thread_checkWaketicksAndWakeup(int64_t current_ticks);
+bool priority_less_than_in_thread (const struct list_elem *a, const struct list_elem *b, void *aux);
+void thread_check_priority_and_yield(void);
 
 /* Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func (struct thread *t, void *aux);
