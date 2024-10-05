@@ -21,8 +21,8 @@
 #define THREAD_MAGIC 0xcd6abf4b
 
 /* struct declaration */
-static struct list ready_list;          /* List of processes in THREAD_READY state */
 static struct list all_list;            /* List of all processes. Added when first scheduled, Removed when they exit. */
+static struct list ready_list;          /* List of processes in THREAD_READY state */
 static struct list sleep_list;          /* [Project 1] : sleep list for sleep thread check */
 
 static struct thread *idle_thread;      /* Idle thread. */
@@ -189,46 +189,10 @@ tid_t thread_create (const char *name, int priority, thread_func *function, void
   /* Add to run queue. */
   thread_unblock (t);
 
+  // 우선순위 확인
+  check_for_preemption();
+
   return tid;
-}
-
-bool is_tick_less (const struct list_elem *a, const struct list_elem *b, void *aux)
-{
-  struct thread *A = list_entry(a, struct thread, elem);
-  struct thread *B = list_entry(b, struct thread, elem);
-  return A->alarmTick < B->alarmTick;
-}
-
-void thread_sleep(int64_t ticks)
-{
-  enum intr_level old_level = intr_disable();   // Interrupt deactivate
-  struct thread *t = thread_current ();         // Read curr thread 
-
-  ASSERT(t != idle_thread);                       
-
-  t->alarmTick = ticks;                         // save WakeUp Ticks
-  list_insert_ordered(&sleep_list, &t->elem, is_tick_less, NULL);         
-  thread_block();                               // Thread block
-
-  intr_set_level(old_level);                    // Interrupt activate
-}
-
-void thread_awake(int64_t ticks)
-{
-  enum intr_level old_level = intr_disable();   // Interrupt deactivate
-  
-  struct list_elem *cur_elem = list_begin(&sleep_list);
-  while(cur_elem != list_tail(&sleep_list)){
-    struct thread *t = list_entry(cur_elem, struct thread, elem);
-    
-    if (t->alarmTick <= ticks){
-      cur_elem = list_remove(cur_elem);
-      thread_unblock(t);
-    }
-    else break;    
-  }
-
-  intr_set_level(old_level);                    // Interrupt activate
 }
 
 /* Puts the current thread to sleep.  It will not be scheduled
@@ -256,14 +220,16 @@ void thread_block (void)
    update other data. */
 void thread_unblock (struct thread *t) 
 {
-  enum intr_level old_level;
+  enum intr_level old_level = intr_disable ();
+  //************ Interrupt deactivate ************//
 
   ASSERT (is_thread (t));
-
-  old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+
+  list_insert_ordered(&ready_list, &t->elem, compare_priority, NULL);         
   t->status = THREAD_READY;
+
+  //************ Interrupt reactivate ************//
   intr_set_level (old_level);
 }
 
@@ -322,15 +288,17 @@ void thread_exit (void)
 void thread_yield (void) 
 {
   struct thread *cur = thread_current ();
-  enum intr_level old_level;
-  
+  enum intr_level old_level = intr_disable ();
+  //************ Interrupt deactivate ************//
+
   ASSERT (!intr_context ());
 
-  old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    list_insert_ordered(&ready_list, &cur->elem, compare_priority, NULL);
   cur->status = THREAD_READY;
   schedule ();
+
+  //************ Interrupt reactivate ************//
   intr_set_level (old_level);
 }
 
@@ -354,6 +322,7 @@ void thread_foreach (thread_action_func *func, void *aux)
 void thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  check_for_preemption();
 }
 
 /* Returns the current thread's priority. */
@@ -366,12 +335,15 @@ int thread_get_priority (void)
 void thread_set_nice (int nice UNUSED) 
 {
   /* Not yet implemented. */
+  struct thread *t = thread_current();
+  
 }
 
 /* Returns the current thread's nice value. */
 int thread_get_nice (void) 
 {
   /* Not yet implemented. */
+  struct thread *t = thread_current();
   return 0;
 }
 
@@ -379,6 +351,7 @@ int thread_get_nice (void)
 int thread_get_load_avg (void) 
 {
   /* Not yet implemented. */
+
   return 0;
 }
 
@@ -585,3 +558,67 @@ static tid_t allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+
+/* for [project 1] : Alarm Clock */
+bool compare_alarm_tick (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+  struct thread *A = list_entry(a, struct thread, elem);
+  struct thread *B = list_entry(b, struct thread, elem);
+  return A->alarmTick < B->alarmTick;
+}
+
+void thread_sleep(int64_t ticks)
+{
+  struct thread *t = thread_current ();     
+  enum intr_level old_level = intr_disable();
+  //************ Interrupt deactivate ************//
+
+  ASSERT(t != idle_thread);                       
+
+  t->alarmTick = ticks; // save WakeUp Ticks
+  list_insert_ordered(&sleep_list, &t->elem, compare_alarm_tick, NULL);         
+  thread_block();                              
+
+  //************ Interrupt activate ************//
+  intr_set_level(old_level);                   
+}
+
+void thread_awake(int64_t ticks)
+{
+  enum intr_level old_level = intr_disable();
+  //************ Interrupt deactivate ************//
+
+  struct list_elem *cur_elem = list_begin(&sleep_list);
+  while(cur_elem != list_tail(&sleep_list)){
+    struct thread *t = list_entry(cur_elem, struct thread, elem);
+    
+    if (t->alarmTick <= ticks){
+      cur_elem = list_remove(cur_elem);
+      thread_unblock(t);
+    }
+    else break;    
+  }
+  
+  //************ Interrupt activate ************//
+  intr_set_level(old_level);                    
+}
+
+/* for [project 1] : Priority Scheduler */
+bool compare_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+  struct thread *A = list_entry(a, struct thread, elem);
+  struct thread *B = list_entry(b, struct thread, elem);
+  return A->priority < B->priority;
+}
+
+void check_for_preemption(void)
+{
+  // Compare the priority of Current Thread with the highest priorities of Ready List 
+  if(!list_empty(&ready_list)){
+    struct thread *cur = thread_current();
+    struct thread *rdy = list_entry(ready_list.head.next, struct thread, elem);
+
+    if(cur->priority < rdy->priority) thread_yield();
+  }
+}
