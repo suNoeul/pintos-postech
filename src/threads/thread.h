@@ -91,6 +91,11 @@ struct thread
     struct list_elem allelem;           /* List element for all threads list. */
 
     int64_t wake_ticks;
+    int origin_priority;
+    bool is_donated;
+    struct lock *wish_lock;
+    struct list_elem donation_elem;
+    struct list donations;
 
 
     /* Shared between thread.c and synch.c. */
@@ -133,7 +138,7 @@ void thread_yield (void);
 /*defined by dudu(thread.c)*/
 void thread_sleep(int64_t wake_tick);
 void thread_checkWaketicksAndWakeup(int64_t current_ticks);
-bool priority_less_than_in_thread (const struct list_elem *a, const struct list_elem *b, void *aux);
+bool priority_more_than_in_thread (const struct list_elem *a, const struct list_elem *b, void *aux);
 void thread_check_priority_and_yield(void);
 
 /* Performs some operation on thread t, given auxiliary data AUX. */
