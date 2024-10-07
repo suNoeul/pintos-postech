@@ -570,12 +570,12 @@ bool compare_alarm_tick (const struct list_elem *a, const struct list_elem *b, v
 
 void thread_sleep(int64_t ticks)
 {
-  struct thread *t = thread_current ();     
+  struct thread *t = thread_current ();    
+  ASSERT(t != idle_thread); 
+
   enum intr_level old_level = intr_disable();
   //************ Interrupt deactivate ************//
-
-  ASSERT(t != idle_thread);                       
-
+                      
   t->alarmTick = ticks; // save WakeUp Ticks
   list_insert_ordered(&sleep_list, &t->elem, compare_alarm_tick, NULL);         
   thread_block();                              
@@ -586,20 +586,20 @@ void thread_sleep(int64_t ticks)
 
 void thread_awake(int64_t ticks)
 {
+  struct list_elem *cur_elem = list_begin(&sleep_list);
+  struct thread *t;
+  
   enum intr_level old_level = intr_disable();
   //************ Interrupt deactivate ************//
-
-  struct list_elem *cur_elem = list_begin(&sleep_list);
   while(cur_elem != list_tail(&sleep_list)){
-    struct thread *t = list_entry(cur_elem, struct thread, elem);
+    t = list_entry(cur_elem, struct thread, elem);
     
     if (t->alarmTick <= ticks){
       cur_elem = list_remove(cur_elem);
       thread_unblock(t);
     }
     else break;    
-  }
-  
+  }  
   //************ Interrupt activate ************//
   intr_set_level(old_level);                    
 }
@@ -609,7 +609,7 @@ bool compare_priority(const struct list_elem *a, const struct list_elem *b, void
 {
   struct thread *A = list_entry(a, struct thread, elem);
   struct thread *B = list_entry(b, struct thread, elem);
-  return A->priority < B->priority;
+  return A->priority > B->priority;
 }
 
 void check_for_preemption(void)
