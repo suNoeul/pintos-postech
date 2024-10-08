@@ -42,7 +42,7 @@ void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
 
 bool priority_more_than_in_semaphore(const struct list_elem *a, const struct list_elem *b, void *aux);
-void donate_priority(struct thread *donor, struct lock *lock);
+void donate_priority(struct thread *current, int priority);
 void recover_priority(struct thread *current, struct lock *lock);
 
 /* Optimization barrier.

@@ -214,7 +214,8 @@ lock_acquire (struct lock *lock)
   struct thread *current = thread_current();
   if (lock->holder != NULL) {
     current->wish_lock = lock;
-    donate_priority(current, lock);
+    list_insert_ordered(&lock->holder->donations, &current->donation_elem, priority_more_than_in_thread, NULL);
+    donate_priority(current, current->priority);
   }
   sema_down (&lock->semaphore);
   current->wish_lock = NULL;
@@ -372,21 +373,20 @@ bool priority_more_than_in_semaphore(const struct list_elem *a, const struct lis
   return thread_a->priority > thread_b->priority;
 }
 
-void donate_priority(struct thread *donor, struct lock *lock) {
-  struct thread *holder = lock->holder;
-  if (holder != NULL && donor->priority > holder->priority) {
-    list_insert_ordered(&holder->donations, &donor->donation_elem, priority_more_than_in_thread,NULL);
-    holder->priority = donor->priority;
-    if (holder->wish_lock != NULL) {
-        donate_priority(donor, holder->wish_lock);
+void donate_priority(struct thread *current, int priority) {
+    if (current->wish_lock == NULL) {
+        return;
     }
-  }
+    struct thread *holder = current->wish_lock->holder;
+    holder->priority = priority;
+    donate_priority(holder, priority);
 }
+
+
 
 void recover_priority(struct thread *current, struct lock *lock) {
   struct thread *donor;
   struct list_elem *cur = list_begin(&current->donations);
-        
   while (cur != list_end(&current->donations)) {
     donor = list_entry(cur, struct thread, donation_elem);
     if (donor->wish_lock == lock) {
