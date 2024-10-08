@@ -220,15 +220,14 @@ void thread_block (void)
    update other data. */
 void thread_unblock (struct thread *t) 
 {
-  enum intr_level old_level = intr_disable ();
-  //************ Interrupt deactivate ************//
-
+  enum intr_level old_level;
   ASSERT (is_thread (t));
-  ASSERT (t->status == THREAD_BLOCKED);
 
+  old_level = intr_disable ();
+  //************ Interrupt deactivate ************//
+  ASSERT (t->status == THREAD_BLOCKED);
   list_insert_ordered(&ready_list, &t->elem, compare_priority, NULL);         
   t->status = THREAD_READY;
-
   //************ Interrupt reactivate ************//
   intr_set_level (old_level);
 }
@@ -288,16 +287,15 @@ void thread_exit (void)
 void thread_yield (void) 
 {
   struct thread *cur = thread_current ();
-  enum intr_level old_level = intr_disable ();
-  //************ Interrupt deactivate ************//
-
+  enum intr_level old_level;
   ASSERT (!intr_context ());
 
+  old_level = intr_disable ();
+  //************ Interrupt deactivate ************//
   if (cur != idle_thread) 
     list_insert_ordered(&ready_list, &cur->elem, compare_priority, NULL);
   cur->status = THREAD_READY;
   schedule ();
-
   //************ Interrupt reactivate ************//
   intr_set_level (old_level);
 }
@@ -444,6 +442,14 @@ static void init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+
+  /* [Project1] Init for Alarm Clock */
+  t->alarmTick = 0;   
+
+  /* [Project1] Init for Priority donation */
+  t->origin_priority = priority;
+  t->requested_lock = NULL;
+  list_init (&t->donor_list);
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);

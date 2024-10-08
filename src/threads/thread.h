@@ -95,11 +95,12 @@ struct thread {
    /* Project1 */
    int64_t alarmTick;                  /* wakeup tick 저장 변수 선언 */
 
-   // int eigen_priority;                 /* Origin Priority */
-   // struct lock* requesetd_lock;        /* wating for release */
-   // struct list  donation_list;         /* Threads that donated themselves */
-   // struct list_elem donor_elem;        /* donor element */
-    
+   int origin_priority;                /* Origin Priority */
+   struct lock* requested_lock;        /* wating for release */
+   struct list  donor_list;            /* Threads that donated themselves */
+   struct list_elem donate_elem;       /* donation element */
+   
+
 #ifdef USERPROG
    /* Owned by userprog/process.c. */
    uint32_t *pagedir;                  /* Page directory. */
@@ -145,10 +146,12 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+/* [project1] Alarm Clock */
 bool compare_alarm_tick (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 void thread_sleep(int64_t ticks);
 void thread_awake(int64_t ticks);
 
+/* [project1] Priority Scheduling */
 bool compare_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 void check_for_preemption(void);
 

@@ -66,12 +66,17 @@ sema_down (struct semaphore *sema)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
+  //************ Interrupt deactivate ************//
+
   while (sema->value == 0) 
     {
+      
       list_push_back (&sema->waiters, &thread_current ()->elem);
       thread_block ();
     }
   sema->value--;
+
+  //************ Interrupt activate ************//
   intr_set_level (old_level);
 }
 
@@ -114,8 +119,7 @@ sema_up (struct semaphore *sema)
 
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters)) 
-    thread_unblock (list_entry (list_pop_front (&sema->waiters),
-                                struct thread, elem));
+    thread_unblock (list_entry (list_pop_front (&sema->waiters), struct thread, elem));
   sema->value++;
   intr_set_level (old_level);
 }
@@ -196,7 +200,12 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+  // lock holder가 존재하면, donate priority 실행
+  // lock holder의 list에 본인을 추가 with donation의 compare_priority()
+
   sema_down (&lock->semaphore);
+
+  // 이제 기다리는 lock* 은 없음(얻음)
   lock->holder = thread_current ();
 }
 
