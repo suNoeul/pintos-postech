@@ -378,7 +378,7 @@ void donate_priority(struct thread *donor, struct lock *lock) {
     list_insert_ordered(&holder->donations, &donor->donation_elem, priority_more_than_in_thread,NULL);
     holder->priority = donor->priority;
     if (holder->wish_lock != NULL) {
-        donate_priority(holder, holder->wish_lock);
+        donate_priority(donor, holder->wish_lock);
     }
   }
 }
