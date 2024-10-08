@@ -90,6 +90,14 @@ struct thread
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
 
+    int64_t wake_ticks;
+    int origin_priority;
+    bool is_donated;
+    struct lock *wish_lock;
+    struct list_elem donation_elem;
+    struct list donations;
+
+
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
@@ -118,6 +126,7 @@ tid_t thread_create (const char *name, int priority, thread_func *, void *);
 
 void thread_block (void);
 void thread_unblock (struct thread *);
+bool ticks_less_than (const struct list_elem *a, const struct list_elem *b, void *aux); /*dudu*/
 
 struct thread *thread_current (void);
 tid_t thread_tid (void);
@@ -125,6 +134,12 @@ const char *thread_name (void);
 
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
+
+/*defined by dudu(thread.c)*/
+void thread_sleep(int64_t wake_tick);
+void thread_checkWaketicksAndWakeup(int64_t current_ticks);
+bool priority_more_than_in_thread (const struct list_elem *a, const struct list_elem *b, void *aux);
+void thread_check_priority_and_yield(void);
 
 /* Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func (struct thread *t, void *aux);
