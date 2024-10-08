@@ -340,8 +340,9 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
   thread_current ()->origin_priority = new_priority;
+  if(list_empty(&thread_current()->donations))
+    thread_current ()->priority = new_priority;
   thread_check_priority_and_yield();
 }
 
@@ -471,7 +472,6 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   t->origin_priority = priority;
-  t->is_donated = false;
   t->wish_lock = NULL;
   list_init(&t->donations);
 

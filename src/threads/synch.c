@@ -215,7 +215,6 @@ lock_acquire (struct lock *lock)
   if (lock->holder != NULL) {
     current->wish_lock = lock;
     donate_priority(current, lock);
-    thread_check_priority_and_yield();
   }
   sema_down (&lock->semaphore);
   current->wish_lock = NULL;
@@ -396,10 +395,8 @@ void recover_priority(struct thread *current, struct lock *lock) {
         cur = list_next(cur);
     }
   }
-  if(list_empty(&current->donations)) {
-    current->priority = current->origin_priority;
-  }
-  else {
+  current->priority = current->origin_priority;
+  if(!list_empty(&current->donations)) {
     struct thread *highest_donor = list_entry(list_begin(&current->donations), struct thread, donation_elem);
     if (highest_donor->priority > current->priority) {
       current->priority = highest_donor->priority;
