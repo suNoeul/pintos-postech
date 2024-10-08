@@ -92,7 +92,6 @@ struct thread
 
     int64_t wake_ticks;
     int origin_priority;
-    bool is_donated;
     struct lock *wish_lock;
     struct list_elem donation_elem;
     struct list donations;

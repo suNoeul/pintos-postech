@@ -617,7 +617,7 @@ void thread_checkWaketicksAndWakeup(int64_t current_ticks){
     thread_check_priority_and_yield();
   }
 }
-
+/*ready_list가 sorted함이 보장되어 있어야함. */
 bool priority_more_than_in_thread (const struct list_elem *a, const struct list_elem *b, void *aux) {
   struct thread *thread_a = list_entry(a, struct thread, elem);
   struct thread *thread_b = list_entry(b, struct thread, elem);
