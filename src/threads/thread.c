@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fixed_point.h"        // header for Fixed-Point Real Arithmetic
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -655,3 +656,5 @@ void reorder_priority()
       curr->priority = donor->priority;
   }    
 }
+
+/* for [project 1] : Advanced Scheduler */
