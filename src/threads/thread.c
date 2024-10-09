@@ -33,7 +33,7 @@ static struct lock tid_lock;            /* Lock used by allocate_tid(). */
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame 
   {
-    void *eip;                  /* Return address. */
+    void *eip;                  /* kernel_thread() 종료된 후 반환할 return address */ 
     thread_func *function;      /* Function to call. */
     void *aux;                  /* Auxiliary data for function. */
   };
@@ -190,7 +190,7 @@ tid_t thread_create (const char *name, int priority, thread_func *function, void
   thread_unblock (t);
 
   // 우선순위 확인
-  check_for_preemption();
+  check_priority_for_yield();
 
   return tid;
 }
@@ -226,7 +226,7 @@ void thread_unblock (struct thread *t)
   old_level = intr_disable ();
   //************ Interrupt deactivate ************//
   ASSERT (t->status == THREAD_BLOCKED);
-  list_insert_ordered(&ready_list, &t->elem, compare_priority, NULL);         
+  list_insert_ordered(&ready_list, &t->elem, compare_thread_priority, NULL);         
   t->status = THREAD_READY;
   //************ Interrupt reactivate ************//
   intr_set_level (old_level);
@@ -293,7 +293,7 @@ void thread_yield (void)
   old_level = intr_disable ();
   //************ Interrupt deactivate ************//
   if (cur != idle_thread) 
-    list_insert_ordered(&ready_list, &cur->elem, compare_priority, NULL);
+    list_insert_ordered(&ready_list, &cur->elem, compare_thread_priority, NULL);
   cur->status = THREAD_READY;
   schedule ();
   //************ Interrupt reactivate ************//
@@ -320,7 +320,7 @@ void thread_foreach (thread_action_func *func, void *aux)
 void thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
-  check_for_preemption();
+  check_priority_for_yield();
 }
 
 /* Returns the current thread's priority. */
@@ -378,8 +378,10 @@ static void idle (void *idle_started_ UNUSED)
   for (;;) 
     {
       /* Let someone else run. */
-      intr_disable ();
-      thread_block ();
+      intr_disable (); 
+      thread_block (); 
+      /* block 해도, schedule() 될 때, ready_list가 empty이면
+         다시 idle_thread로 스케듈링 된다. */
 
       /* Re-enable interrupts and wait for the next one.
 
@@ -416,8 +418,8 @@ struct thread * running_thread (void)
      down to the start of a page.  Because `struct thread' is
      always at the beginning of a page and the stack pointer is
      somewhere in the middle, this locates the curent thread. */
-  asm ("mov %%esp, %0" : "=g" (esp));
-  return pg_round_down (esp);
+  asm ("mov %%esp, %0" : "=g" (esp)); // ESP 레지스터의 값을 읽어서, C변수 esp에 저장
+  return pg_round_down (esp);         // esp를 기준으로 해당 주소가 속한 page의 시작 주소를 반환
 }
 
 /* Returns true if T appears to point to a valid thread. */
@@ -448,7 +450,7 @@ static void init_thread (struct thread *t, const char *name, int priority)
 
   /* [Project1] Init for Priority donation */
   t->origin_priority = priority;
-  t->requested_lock = NULL;
+  t->waiting_lock = NULL;
   list_init (&t->donor_list);
 
   old_level = intr_disable ();
@@ -611,20 +613,27 @@ void thread_awake(int64_t ticks)
 }
 
 /* for [project 1] : Priority Scheduler */
-bool compare_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+bool compare_thread_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
   struct thread *A = list_entry(a, struct thread, elem);
   struct thread *B = list_entry(b, struct thread, elem);
   return A->priority > B->priority;
 }
 
-void check_for_preemption(void)
+bool compare_donation_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+    struct thread *A = list_entry(a, struct thread, donate_elem);
+    struct thread *B = list_entry(b, struct thread, donate_elem);
+    return A->priority > B->priority;
+}
+
+void check_priority_for_yield(void)
 {
   // Compare the priority of Current Thread with the highest priorities of Ready List 
-  if(!list_empty(&ready_list)){
-    struct thread *cur = thread_current();
-    struct thread *rdy = list_entry(ready_list.head.next, struct thread, elem);
+  if (!list_empty(&ready_list)) {
+    struct thread *current_thread = thread_current();
+    struct thread *highest_thread = list_entry(list_front(&ready_list), struct thread, elem);
 
-    if(cur->priority < rdy->priority) thread_yield();
+    if(current_thread->priority < highest_thread->priority) thread_yield();
   }
 }

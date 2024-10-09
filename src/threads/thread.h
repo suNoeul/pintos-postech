@@ -96,7 +96,7 @@ struct thread {
    int64_t alarmTick;                  /* wakeup tick 저장 변수 선언 */
 
    int origin_priority;                /* Origin Priority */
-   struct lock* requested_lock;        /* wating for release */
+   struct lock* waiting_lock;          /* wating for release */
    struct list  donor_list;            /* Threads that donated themselves */
    struct list_elem donate_elem;       /* donation element */
    
@@ -152,7 +152,8 @@ void thread_sleep(int64_t ticks);
 void thread_awake(int64_t ticks);
 
 /* [project1] Priority Scheduling */
-bool compare_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
-void check_for_preemption(void);
+bool compare_thread_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+bool compare_donation_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+void check_priority_for_yield(void);
 
 #endif /* threads/thread.h */
