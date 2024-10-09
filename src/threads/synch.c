@@ -257,8 +257,10 @@ lock_release (struct lock *lock)
   lock_sema_up (&lock->semaphore);
   lock->holder = NULL;
   intr_set_level (old_level);
-  recover_priority(thread_current(), lock);
-  thread_check_priority_and_yield();
+  if(!thread_mlfqs){
+    recover_priority(thread_current(), lock);
+    thread_check_priority_and_yield();
+  }
 }
 
 /* Returns true if the current thread holds LOCK, false
