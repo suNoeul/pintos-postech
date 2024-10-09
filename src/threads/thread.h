@@ -155,5 +155,7 @@ void thread_awake(int64_t ticks);
 bool compare_thread_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 bool compare_donation_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 void check_priority_for_yield(void);
+void reorder_priority(void);
+
 
 #endif /* threads/thread.h */

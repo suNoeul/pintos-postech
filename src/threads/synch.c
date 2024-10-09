@@ -65,12 +65,11 @@ void sema_down (struct semaphore *sema)
 
   old_level = intr_disable ();
   //************ Interrupt deactivate ************//
-  while (sema->value == 0) 
-    {
-      // 스레드가 sema waiters에 추가될 때, Priority 기준으로 삽입
-      list_insert_ordered(&sema->waiters, &thread_current ()->elem, compare_thread_priority, NULL);
-      thread_block ();
-    }
+  while (sema->value == 0)   {
+    // 스레드가 sema waiters에 추가될 때, Priority 기준으로 삽입
+    list_insert_ordered(&sema->waiters, &thread_current ()->elem, compare_thread_priority, NULL);
+    thread_block ();
+  }
   sema->value--;
   //************ Interrupt activate ************//
   intr_set_level (old_level);
@@ -113,14 +112,15 @@ void sema_up (struct semaphore *sema)
 
   old_level = intr_disable ();
   //************ Interrupt deactivate ************//
-    if (!list_empty (&sema->waiters)) 
-    {
-      /* Unblock 전에, Atomic 구간 안에서 Waiter list 재정렬 */
-      list_sort(&sema->waiters, compare_thread_priority, NULL);
-      thread_unblock (list_entry (list_pop_front (&sema->waiters), struct thread, elem));
-    }
+  if (!list_empty (&sema->waiters)) 
+  {
+    /* Unblock 전에, Atomic 구간 안에서 Waiter list 재정렬 */
+    list_sort(&sema->waiters, compare_thread_priority, NULL);
+    thread_unblock (list_entry (list_pop_front (&sema->waiters), struct thread, elem));
+  }
   sema->value++;
   //************ Interrupt activate ************//
+  check_priority_for_yield();  //debuging
   intr_set_level (old_level);
 
   /* 
@@ -128,7 +128,7 @@ void sema_up (struct semaphore *sema)
       - 우선순위 비교함수 자체는 Atomic하게 구현될 필요 없음. 
       - thread_yield()는 내부에 자체적인 Interrupt control 함수 구현되어 있음. 
   */
-  check_priority_for_yield(); 
+  // check_priority_for_yield(); 
 }
 
 static void sema_test_helper (void *sema_);
@@ -247,19 +247,7 @@ void lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   // Step1. Donor_list 탐색, Lock 제거
-  struct list *donor_list = &thread_current()->donor_list;
-  struct thread *temp;
-  
-  if(!list_empty(donor_list)){
-  
-    struct list_elem *donate_elem = list_front(donor_list);
-
-    while(donate_elem != list_end(donor_list)){
-      temp = list_entry(donate_elem, struct thread, donate_elem);
-      if(temp->waiting_lock == lock)
-        donate_elem = list_remove(&temp->donate_elem);
-    }
-  }
+  remove_lock(lock);
   // Step2. Reorder Priority
   reorder_priority();
 
@@ -380,25 +368,12 @@ void donate_priority(struct lock *lock)
   for(int i = 0; i < 8 ; i++){
     if (!current->waiting_lock) break;
     holder = current->waiting_lock->holder;
-    // if(holder != NULL){
     holder->priority = current->priority;
     current = holder;
+  }
+    // if(holder != NULL){
     // waiting lock이 없으면 For 구문 탈출
     // if(!holder->waiting_lock) break;  
-  }
-}
-
-void reorder_priority()
-{
-  struct thread *curr = thread_current();
-  struct thread *donor;
-
-  curr->priority = curr->origin_priority;
-  
-  if (!list_empty(&curr->donor_list)){
-    donor = list_entry(list_front(&curr->donor_list), struct thread, donate_elem);
-    curr->priority = donor->priority;
-  }    
 }
 
 bool compare_sema_priority(const struct list_elem *a, const struct list_elem *b, void *aux)
@@ -411,5 +386,19 @@ bool compare_sema_priority(const struct list_elem *a, const struct list_elem *b,
   return A->priority > B->priority;
 }
 
+void remove_lock(struct lock *lock)
+{
+  struct list *donor_list = &thread_current()->donor_list;
+  struct list_elem *donate_elem = list_begin(donor_list);
 
-    
+  struct thread *temp;
+  
+  // if(!list_empty(donor_list)){
+  while(donate_elem != list_end(donor_list)){
+    temp = list_entry(donate_elem, struct thread, donate_elem);
+    if(temp->waiting_lock == lock)
+      list_remove(&temp->donate_elem);
+    donate_elem = list_next(donate_elem);
+  }
+  // }
+}

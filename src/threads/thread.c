@@ -319,7 +319,8 @@ void thread_foreach (thread_action_func *func, void *aux)
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  thread_current ()->origin_priority = new_priority;
+  reorder_priority();
   check_priority_for_yield();
 }
 
@@ -634,6 +635,23 @@ void check_priority_for_yield(void)
     struct thread *current_thread = thread_current();
     struct thread *highest_thread = list_entry(list_front(&ready_list), struct thread, elem);
 
-    if(current_thread->priority < highest_thread->priority) thread_yield();
+    if(current_thread->priority < highest_thread->priority) 
+      thread_yield();
   }
+}
+
+void reorder_priority()
+{
+  struct thread *curr = thread_current();
+  struct thread *donor;
+
+  curr->priority = curr->origin_priority;
+  
+  if (!list_empty(&curr->donor_list)){
+    // list sort해야하는가??? debugging
+    list_sort(&curr->donor_list, compare_donation_priority, NULL);
+    donor = list_entry(list_front(&curr->donor_list), struct thread, donate_elem);
+    if (curr->priority < donor->priority)
+      curr->priority = donor->priority;
+  }    
 }
