@@ -212,7 +212,7 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
   struct thread *current = thread_current();
-  if (lock->holder != NULL) {
+  if (lock->holder != NULL && !thread_mlfqs) {
     current->wish_lock = lock;
     list_insert_ordered(&lock->holder->donations, &current->donation_elem, priority_more_than_in_thread, NULL);
     donate_priority(current, current->priority);

@@ -96,6 +96,9 @@ struct thread
     struct list_elem donation_elem;
     struct list donations;
 
+    int recent_cpu;
+    int nice;
+
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -152,8 +155,9 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-void calculate_recent_cpu(void);
+void calculate_recent_cpu(struct thread* t);
 void calculate_load_avg (void);
-
+void calculate_priority(struct thread* t);
+void increase_one_recent_cpu(struct thread* t);
 
 #endif /* threads/thread.h */

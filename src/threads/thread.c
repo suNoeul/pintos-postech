@@ -13,6 +13,7 @@
 #include "threads/vaddr.h"
 #ifdef USERPROG
 #include "userprog/process.h"
+#include "threads/fixedpoint.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -60,6 +61,7 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
 
+int load_avg;
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
@@ -94,6 +96,7 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&all_list);
   list_init (&sleep_list);
+  load_avg = 0;
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -340,10 +343,12 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->origin_priority = new_priority;
-  if(list_empty(&thread_current()->donations))
-    thread_current ()->priority = new_priority;
-  thread_check_priority_and_yield();
+  if(!thread_mlfqs) {
+    thread_current ()->origin_priority = new_priority;
+    if(list_empty(&thread_current()->donations))
+      thread_current ()->priority = new_priority;
+    thread_check_priority_and_yield();
+  }
 }
 
 /* Returns the current thread's priority. */
@@ -357,31 +362,30 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice UNUSED) 
 {
-  /* Not yet implemented. */
+  thread_current ()->nice = nice;
+  calculate_priority (thread_current());
+  thread_check_priority_and_yield();
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current()->nice;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return convert_x2int_near(mul_int (load_avg, 100));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return convert_x2int_near(mul_int (thread_current()->recent_cpu, 100));
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -473,6 +477,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
   t->origin_priority = priority;
   t->wish_lock = NULL;
+
+  t->recent_cpu = 0;
+  t->nice = 0;
+
   list_init(&t->donations);
 
   old_level = intr_disable ();
@@ -614,7 +622,6 @@ void thread_checkWaketicksAndWakeup(int64_t current_ticks){
     }
     list_pop_front(&sleep_list);
     thread_unblock(wake_thread);
-    thread_check_priority_and_yield();
   }
 }
 /*ready_list가 sorted함이 보장되어 있어야함. */
@@ -633,7 +640,51 @@ void thread_check_priority_and_yield(void) {
   }
 }
 
+void calculate_recent_cpu(struct thread* t) {
+  if (t != idle_thread) {
+    int recent_cpu = t->recent_cpu;
+    int nice = t->nice;
+    int temp = mul_fp(convert2fp(2), load_avg);
+    temp = div_fp(temp, add_fp(temp, convert2fp(1)));
+    temp = mul_fp(temp, recent_cpu); 
+    t->recent_cpu = add_fp(temp, convert2fp(nice)); 
+  }
+}
 
+void calculate_load_avg (void) {
+  int ready_threads = (thread_current() == idle_thread) ? list_size (&ready_list) : list_size (&ready_list) + 1;
+  load_avg = add_fp(div_fp(mul_fp(load_avg, convert2fp(59)), convert2fp(60)), div_fp(convert2fp(ready_threads), convert2fp(60)));
+}
+
+void calculate_priority(struct thread* t) {
+  if (t != idle_thread) {
+    int nice = t->nice;
+    int recent_cpu = t->recent_cpu;
+    int priority = convert2fp(PRI_MAX);
+    priority = sub_fp(priority, div_int(recent_cpu, 4));
+    priority = sub_fp(priority, convert2fp(nice * 2));
+    t->priority = convert_x2int_tz(priority);
+    if (t->priority < PRI_MIN) {
+      t->priority = PRI_MIN;
+    } else if (t->priority > PRI_MAX) {
+      t->priority = PRI_MAX;
+    }
+  }
+}
+
+void increase_one_recent_cpu(struct thread* t) {
+  if(t != idle_thread){
+    t->recent_cpu = add_int(t->recent_cpu, 1);
+  }
+}
+
+void calculate_all_recent_cpu() {
+  thread_foreach(calculate_recent_cpu, NULL);
+}
+
+void calculate_all_priority() {
+  thread_foreach(calculate_priority, NULL);
+}
 
 
 /* Offset of `stack' member within `struct thread'.
