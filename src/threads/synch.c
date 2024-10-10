@@ -112,7 +112,6 @@ sema_up (struct semaphore *sema)
   enum intr_level old_level;
 
   ASSERT (sema != NULL);
-
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters)) {
     list_sort(&sema->waiters, priority_more_than_in_thread, NULL); /*temp*/
@@ -252,13 +251,19 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
-  enum intr_level old_level;
-  old_level = intr_disable ();
-  lock_sema_up (&lock->semaphore);
-  lock->holder = NULL;
-  intr_set_level (old_level);
+  
   if(!thread_mlfqs){
+    enum intr_level old_level;
+    old_level = intr_disable ();
+    lock_sema_up (&lock->semaphore);
+    lock->holder = NULL;
+    intr_set_level (old_level);
     recover_priority(thread_current(), lock);
+    thread_check_priority_and_yield();
+  }
+  else {
+    sema_up(&lock->semaphore);
+    lock->holder = NULL;
     thread_check_priority_and_yield();
   }
 }
@@ -324,7 +329,7 @@ cond_wait (struct condition *cond, struct lock *lock)
   
   sema_init (&waiter.semaphore, 0);
   list_insert_ordered(&cond->waiters, &waiter.elem, priority_more_than_in_semaphore, NULL);
-  lock_release (lock);
+  lock_release (lock); 
   sema_down (&waiter.semaphore);
   lock_acquire (lock);
 }
