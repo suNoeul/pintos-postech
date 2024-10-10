@@ -100,6 +100,8 @@ struct thread {
    struct list  donor_list;            /* Threads that donated themselves */
    struct list_elem donate_elem;       /* donation element */
    
+   int nice;
+   int recent_cpu;
 
 #ifdef USERPROG
    /* Owned by userprog/process.c. */
@@ -157,5 +159,12 @@ bool compare_donation_priority(const struct list_elem *a, const struct list_elem
 void check_priority_for_yield(void);
 void reorder_priority(void);
 
+/* for [project 1] : Advanced Scheduler */
+void calculate_priority(struct thread *t);
+void calculate_recent_cpu(struct thread *t);
+void calculate_load_avg(void);
+void increase_one_recent_cpu(struct thread* t);
+void calculate_all_recent_cpu(void);
+void calculate_all_priority(void);
 
 #endif /* threads/thread.h */

@@ -23,6 +23,9 @@ int sub_x_n (int x, int n);
 int mul_x_n (int x, int n);
 int div_x_n (int x, int n);
 
+int add_n_x (int n, int x);
+int sub_n_x (int n, int x);
+
 
 /* Function definition */
 int conv_n_fp (int n) { return n * f; }
@@ -41,5 +44,8 @@ int add_x_n (int x, int n) { return x + n * f; }
 int sub_x_n (int x, int n) { return x - n * f; }
 int mul_x_n (int x, int n) { return x * n; }
 int div_x_n (int x, int n) { return x / n; }
+
+int add_n_x (int n, int x) { return n * f + x; }
+int sub_n_x (int n, int x) { return n * f - x; }
 
 #endif

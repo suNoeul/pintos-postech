@@ -205,7 +205,7 @@ void lock_acquire (struct lock *lock)
   struct thread *cur = thread_current();
 
   // lock holder가 존재하면, donate priority 실행
-  if (lock->holder){
+  if (lock->holder && !thread_mlfqs){
     cur->waiting_lock = lock;
     list_insert_ordered(&lock->holder->donor_list, &cur->donate_elem, compare_donation_priority, NULL);
     donate_priority(lock);
@@ -246,11 +246,13 @@ void lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  // Step1. Donor_list 탐색, Lock 제거
-  remove_lock(lock);
-  // Step2. Reorder Priority
-  reorder_priority();
-
+  if(!thread_mlfqs){
+    // Step1. Donor_list 탐색, Lock 제거
+    remove_lock(lock);
+    // Step2. Reorder Priority
+    reorder_priority();
+  }
+  
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 }
