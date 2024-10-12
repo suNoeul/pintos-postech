@@ -33,7 +33,7 @@ void switch_thunk (void);
 #endif
 
 /* Offsets used by switch.S. */
-#define SWITCH_CUR      20
-#define SWITCH_NEXT     24
+#define SWITCH_CUR      20  // 스택에 저장된 현재 스레드
+#define SWITCH_NEXT     24  // 다음 스레드
 
 #endif /* threads/switch.h */

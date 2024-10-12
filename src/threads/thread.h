@@ -80,27 +80,37 @@ typedef int tid_t;
    only because they are mutually exclusive: only a thread in the
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list. */
-struct thread
-  {
-    /* Owned by thread.c. */
-    tid_t tid;                          /* Thread identifier. */
-    enum thread_status status;          /* Thread state. */
-    char name[16];                      /* Name (for debugging purposes). */
-    uint8_t *stack;                     /* Saved stack pointer. */
-    int priority;                       /* Priority. */
-    struct list_elem allelem;           /* List element for all threads list. */
+struct thread {
+   /* Owned by thread.c. */
+   tid_t tid;                          /* Thread identifier. */
+   char name[16];                      /* Name (for debugging purposes). */
+   int priority;                       /* Priority. */
+   uint8_t *stack;                     /* Saved stack pointer. */
+   struct list_elem allelem;           /* List element for all threads list. */
+   enum thread_status status;          /* Thread state. */
 
-    /* Shared between thread.c and synch.c. */
-    struct list_elem elem;              /* List element. */
+   /* Shared between thread.c and synch.c. */
+   struct list_elem elem;              /* List element. */
+
+   /* Project1 */
+   int64_t alarmTick;                  /* wakeup tick 저장 변수 선언 */
+
+   int origin_priority;                /* Origin Priority */
+   struct lock* waiting_lock;          /* wating for release */
+   struct list  donor_list;            /* Threads that donated themselves */
+   struct list_elem donate_elem;       /* donation element */
+   
+   int nice;
+   int recent_cpu;
 
 #ifdef USERPROG
-    /* Owned by userprog/process.c. */
-    uint32_t *pagedir;                  /* Page directory. */
+   /* Owned by userprog/process.c. */
+   uint32_t *pagedir;                  /* Page directory. */
 #endif
 
-    /* Owned by thread.c. */
-    unsigned magic;                     /* Detects stack overflow. */
-  };
+   /* Owned by thread.c. */
+   unsigned magic;                     /* Detects stack overflow. */
+};
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -137,5 +147,25 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+/* [project1] Alarm Clock */
+bool compare_alarm_tick (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+void thread_sleep(int64_t ticks);
+void thread_awake(int64_t ticks);
+
+/* [project1] Priority Scheduling */
+bool compare_thread_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+bool compare_donation_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+void check_priority_for_yield(void);
+void set_cur_thread_priority(void);
+
+/* [project 1] Advanced Scheduler */
+void calculate_priority(struct thread *t);
+void calculate_recent_cpu(struct thread *t);
+void calculate_load_avg(void);
+void increase_one_recent_cpu(struct thread* t);
+void calculate_all_recent_cpu(void);
+void calculate_all_priority(void);
+void sort_readylist(void);
 
 #endif /* threads/thread.h */
