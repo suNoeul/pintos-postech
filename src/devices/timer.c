@@ -87,10 +87,6 @@ void timer_sleep (int64_t ticks)
 
   ASSERT (intr_get_level () == INTR_ON);
   thread_sleep(start + ticks);
-
-  /* Implementation method: Busy wait version */
-      // while (timer_elapsed (start) < ticks) 
-      // thread_yield ()
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -170,7 +166,8 @@ static void timer_interrupt (struct intr_frame *args UNUSED)
       calculate_all_recent_cpu();
     }
     if(ticks % 4 == 0) 
-      calculate_all_priority();    
+      calculate_all_priority();   
+      sort_readylist(); 
   }
 
   thread_awake(ticks);

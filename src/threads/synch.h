@@ -41,10 +41,11 @@ void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
 
-/* [Project 1] for Priority Scheduling */
-void donate_priority(struct lock *lock);
+/* [Project 1] Priority Scheduling */
 bool compare_sema_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
-void remove_lock(struct lock *lock);
+void donate_priority(struct lock *lock);
+void recover_priority(struct lock *lock);
+
 /* Optimization barrier.
 
    The compiler will not reorder operations across an

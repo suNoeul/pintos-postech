@@ -177,7 +177,7 @@ tid_t thread_create (const char *name, int priority, thread_func *function, void
   tid = t->tid = allocate_tid ();
 
   /* Stack frame for kernel_thread(). */
-  kf = alloc_frame (t, sizeof *kf);
+  kf = alloc_frame(t, sizeof *kf);
   kf->eip = NULL;
   kf->function = function;
   kf->aux = aux;
@@ -193,9 +193,7 @@ tid_t thread_create (const char *name, int priority, thread_func *function, void
 
   /* Add to run queue. */
   thread_unblock (t);
-
-  // 우선순위 확인
-  check_priority_for_yield();
+  check_priority_for_yield(); // 우선순위 확인
 
   return tid;
 }
@@ -326,7 +324,7 @@ void thread_set_priority (int new_priority)
 {
   if (!thread_mlfqs) {
     thread_current ()->origin_priority = new_priority;
-    reorder_priority();
+    set_cur_thread_priority();
     check_priority_for_yield();
   }
 }
@@ -589,12 +587,10 @@ void thread_sleep(int64_t ticks)
   ASSERT(t != idle_thread); 
 
   enum intr_level old_level = intr_disable();
-  //************ Interrupt deactivate ************//
-                      
+  //************ Interrupt deactivate ************//            
   t->alarmTick = ticks; // save WakeUp Ticks
   list_insert_ordered(&sleep_list, &t->elem, compare_alarm_tick, NULL);         
   thread_block();                              
-
   //************ Interrupt activate ************//
   intr_set_level(old_level);                   
 }
@@ -608,7 +604,6 @@ void thread_awake(int64_t ticks)
   //************ Interrupt deactivate ************//
   while(cur_elem != list_tail(&sleep_list)){
     t = list_entry(cur_elem, struct thread, elem);
-    
     if (t->alarmTick <= ticks){
       cur_elem = list_remove(cur_elem);
       thread_unblock(t);
@@ -646,16 +641,16 @@ void check_priority_for_yield(void)
   }
 }
 
-void reorder_priority(void)
+void set_cur_thread_priority(void)
 {
   struct thread *curr = thread_current();
   struct thread *donor;
 
+  // 현재 스레드의 origin priority를 Setting
   curr->priority = curr->origin_priority;
   
+  // if, donor_list가 존재한다면 -> donor의 우선순위 값과 비교 후 반영
   if (!list_empty(&curr->donor_list)){
-    // list sort해야하는가??? debugging
-    list_sort(&curr->donor_list, compare_donation_priority, NULL);
     donor = list_entry(list_front(&curr->donor_list), struct thread, donate_elem);
     if (curr->priority < donor->priority)
       curr->priority = donor->priority;
@@ -695,3 +690,5 @@ void increase_one_recent_cpu(struct thread* t) { if(t != idle_thread) t->recent_
 void calculate_all_recent_cpu(void) { thread_foreach(calculate_recent_cpu, NULL); }
 
 void calculate_all_priority(void) { thread_foreach(calculate_priority, NULL); }
+
+void sort_readylist(void) { list_sort(&ready_list, compare_thread_priority, NULL); }
