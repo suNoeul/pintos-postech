@@ -349,7 +349,7 @@ void cond_broadcast (struct condition *cond, struct lock *lock)
 
 
 /* [Project 1] Priority Scheduling */
-bool compare_sema_priority(const struct list_elem *a, const struct list_elem *b, void *aux)
+bool compare_sema_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
   struct semaphore_elem *sema_a = list_entry(a, struct semaphore_elem, elem);
   struct semaphore_elem *sema_b = list_entry(b, struct semaphore_elem, elem);

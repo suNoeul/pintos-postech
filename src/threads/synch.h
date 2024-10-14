@@ -3,6 +3,7 @@
 
 #include <list.h>
 #include <stdbool.h>
+#include "threads/thread.h" // for macro UNUSED
 
 /* A counting semaphore. */
 struct semaphore 
@@ -42,7 +43,7 @@ void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
 
 /* [Project 1] Priority Scheduling */
-bool compare_sema_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
+bool compare_sema_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 void donate_priority(struct lock *lock);
 void recover_priority(struct lock *lock);
 
