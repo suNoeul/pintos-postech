@@ -69,8 +69,7 @@ memcmp (const void *a_, const void *b_, size_t size)
    char) is greater, a negative value if the character in B (as
    an unsigned char) is greater, or zero if strings A and B are
    equal. */
-int
-strcmp (const char *a_, const char *b_) 
+int strcmp (const char *a_, const char *b_) 
 {
   const unsigned char *a = (const unsigned char *) a_;
   const unsigned char *b = (const unsigned char *) b_;
@@ -109,8 +108,7 @@ memchr (const void *block_, int ch_, size_t size)
    null pointer if C does not appear in STRING.  If C == '\0'
    then returns a pointer to the null terminator at the end of
    STRING. */
-char *
-strchr (const char *string, int c_) 
+char * strchr (const char *string, int c_) 
 {
   char c = c_;
 
@@ -231,8 +229,7 @@ strstr (const char *haystack, const char *needle)
      'to'
      'tokenize.'
 */
-char *
-strtok_r (char *s, const char *delimiters, char **save_ptr) 
+char * strtok_r (char *s, const char *delimiters, char **save_ptr) 
 {
   char *token;
   
@@ -245,32 +242,27 @@ strtok_r (char *s, const char *delimiters, char **save_ptr)
     s = *save_ptr;
   ASSERT (s != NULL);
 
-  /* Skip any DELIMITERS at our current position. */
-  while (strchr (delimiters, *s) != NULL) 
-    {
-      /* strchr() will always return nonnull if we're searching
-         for a null byte, because every string contains a null
-         byte (at the end). */
-      if (*s == '\0')
-        {
-          *save_ptr = s;
-          return NULL;
-        }
-
-      s++;
+  /* 구분자(DELIMITERS) Skip */
+  while (strchr (delimiters, *s) != NULL) {
+    /* strchr() 은 항상 Non-NULL 값 반환
+       if, we're searching for a null byte, 
+       모든 문자열의 마지막엔 null byte 존재하기 때문에 */
+    if (*s == '\0') {
+      *save_ptr = s;  
+      return NULL;
     }
+    s++;
+  }
 
   /* Skip any non-DELIMITERS up to the end of the string. */
-  token = s;
+  token = s;              // 토큰 위치 저장
   while (strchr (delimiters, *s) == NULL)
-    s++;
-  if (*s != '\0') 
-    {
-      *s = '\0';
-      *save_ptr = s + 1;
-    }
-  else 
-    *save_ptr = s;
+    s++;                  // Delimiters가 아닐 때까지 s++
+  if (*s != '\0'){        // if, Delimiters를 찾으면  
+      *s = '\0';          // Null 문자로 바꾸고
+      *save_ptr = s + 1;  // 다음 위치 저장
+  } else 
+    *save_ptr = s;        // else, 문자열 끝이면 위치만 저장
   return token;
 }
 
@@ -303,8 +295,7 @@ strlen (const char *string)
 
 /* If STRING is less than MAXLEN characters in length, returns
    its actual length.  Otherwise, returns MAXLEN. */
-size_t
-strnlen (const char *string, size_t maxlen) 
+size_t strnlen (const char *string, size_t maxlen) 
 {
   size_t length;
 

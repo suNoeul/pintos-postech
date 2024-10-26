@@ -25,8 +25,7 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
-tid_t
-process_execute (const char *file_name) 
+tid_t process_execute (const char *file_name) 
 {
   char *fn_copy;
   tid_t tid;
@@ -47,8 +46,7 @@ process_execute (const char *file_name)
 
 /* A thread function that loads a user process and starts it
    running. */
-static void
-start_process (void *file_name_)
+static void start_process (void *file_name_)
 {
   char *file_name = file_name_;
   struct intr_frame if_;
@@ -85,15 +83,16 @@ start_process (void *file_name_)
 
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
-int
-process_wait (tid_t child_tid UNUSED) 
+int process_wait (tid_t child_tid UNUSED) 
 {
-  return -1;
+  while (true) { // 무한 루프: 자식 프로세스 종료까지 대기
+      timer_msleep(100);  // 잠시 대기 (busy waiting 방지)
+  }
+  return -1;  // 실제로는 종료 코드 반환 필요
 }
 
 /* Free the current process's resources. */
-void
-process_exit (void)
+void process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
@@ -119,8 +118,7 @@ process_exit (void)
 /* Sets up the CPU for running user code in the current
    thread.
    This function is called on every context switch. */
-void
-process_activate (void)
+void process_activate (void)
 {
   struct thread *t = thread_current ();
 
