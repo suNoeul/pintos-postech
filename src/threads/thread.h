@@ -144,7 +144,7 @@ int thread_get_priority (void);
 void thread_set_priority (int);
 
 int thread_get_nice (void);
-void thread_set_nice (int);
+void thread_set_nice (int nice UNUSED);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
@@ -157,14 +157,15 @@ void thread_awake(int64_t ticks);
 bool compare_thread_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 bool compare_donation_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 void check_priority_for_yield(void);
-void reorder_priority(void);
+void set_cur_thread_priority(void);
 
-/* for [project 1] : Advanced Scheduler */
-void calculate_priority(struct thread *t);
-void calculate_recent_cpu(struct thread *t);
+/* [project 1] Advanced Scheduler */
+void calculate_priority(struct thread *t, void *aux UNUSED);
+void calculate_recent_cpu(struct thread *t, void *aux UNUSED);
 void calculate_load_avg(void);
 void increase_one_recent_cpu(struct thread* t);
 void calculate_all_recent_cpu(void);
 void calculate_all_priority(void);
+void sort_readylist(void);
 
 #endif /* threads/thread.h */

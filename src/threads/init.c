@@ -185,8 +185,7 @@ static void paging_init (void)
   asm volatile ("movl %0, %%cr3" : : "r" (vtop (init_page_dir)));
 }
 
-/* Breaks the kernel command line into words and returns them as
-   an argv-like array. */
+/* Breaks the kernel command line into words and returns them as an argv-like array. */
 static char ** read_command_line (void) 
 {
   static char *argv[LOADER_ARGS_LEN / 2 + 1]; // 최대 많은 인자 들어온다고 가정 ('\0'과 NULL Pointer 공간 고려)
@@ -222,13 +221,11 @@ static char ** read_command_line (void)
   return argv;
 }
 
-/* Parses options in ARGV[]
-   and returns the first non-option argument. */
+/* Parses options in ARGV[] and returns the first non-option argument. */
 static char ** parse_options (char **argv) 
 {
   // 모든 옵션은 맨 앞에 배치하도록 구현되어 있음. 
-  for (; *argv != NULL && **argv == '-'; argv++)
-    {
+  for (; *argv != NULL && **argv == '-'; argv++) {
       char *save_ptr;
       char *name = strtok_r (*argv, "=", &save_ptr);  // option name 분리
       char *value = strtok_r (NULL, "", &save_ptr);   // option value 분리
@@ -261,7 +258,7 @@ static char ** parse_options (char **argv)
 #endif
       else
         PANIC ("unknown option `%s' (use -h for help)", name);
-    }
+  }
 
   /* Initialize the random number generator based on the system
      time.  This has no effect if an "-rs" option was specified.

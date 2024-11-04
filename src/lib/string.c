@@ -1,10 +1,8 @@
 #include <string.h>
 #include <debug.h>
 
-/* Copies SIZE bytes from SRC to DST, which must not overlap.
-   Returns DST. */
-void *
-memcpy (void *dst_, const void *src_, size_t size) 
+/* Copies SIZE bytes from SRC to DST, which must not overlap. Returns DST. */
+void * memcpy (void *dst_, const void *src_, size_t size) 
 {
   unsigned char *dst = dst_;
   const unsigned char *src = src_;
@@ -269,8 +267,7 @@ char * strtok_r (char *s, const char *delimiters, char **save_ptr)
 }
 
 /* Sets the SIZE bytes in DST to VALUE. */
-void *
-memset (void *dst_, int value, size_t size) 
+void * memset (void *dst_, int value, size_t size) 
 {
   unsigned char *dst = dst_;
 
@@ -283,8 +280,7 @@ memset (void *dst_, int value, size_t size)
 }
 
 /* Returns the length of STRING. */
-size_t
-strlen (const char *string) 
+size_t strlen (const char *string) 
 {
   const char *p;
 

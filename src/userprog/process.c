@@ -18,6 +18,10 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
+// process_wait 함수에서 timer_sleep() 사용하려고 import
+// 기능 완성 된 이후에는 삭제할 것
+#include "devices/timer.h" 
+
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
@@ -43,12 +47,37 @@ tid_t process_execute (const char *file_name)
   return tid;
 }
 
-void argument_passing(char **argv, int argc, void **esp){
-  
+void argument_passing(char **argv, int argc, void *esp){
+  char *arg_stack_addr[64];
+
+  // Step1. Push each argv[i] value
+  for(int i = argc-1; i >= 0; i-- ){
+    int len = strlen(argv[i]) + 1; // null byte 고려(+1)
+    esp -= len ;                   // user stack pointer : len만큼 push
+    memcpy(esp, argv[i], len);       
+    arg_stack_addr[i] = esp;       // Save : stack pointer address 
+  }
+
+  // Step2. word-align :  multiple of 4
+  while((uintptr_t)esp % 4 != 0){
+    esp--; 
+    *(uint8_t *)esp = 0;
+  }
+
+  // Step3. Push each arg_stack_address
+  esp -= 4; // Address of "argv[argc] = 0"
+  *(uint32_t *)esp = 0;
+  for(int i = argc-1; i >= 0; i--){
+    esp -= 4;
+    *(char **)esp = arg_stack_addr[i];
+  }
+
+  // Step4. Push fake return address
+  esp -= 4;
+  *(uint32_t *)esp = 0;
 }
 
-/* A thread function that loads a user process and starts it
-   running. */
+/* A thread function that loads a user process and starts it running. */
 static void start_process (void *file_name_)
 {
   char *file_name = file_name_; 
@@ -64,12 +93,12 @@ static void start_process (void *file_name_)
   /* 
     Todo: Implementing Argument Paassing (by 80x86 Calling Convention)
       1. 공백을 기준으로 단어 분할
-      2. Stack Push : 각 문자열과 Null Pointer (오른쪽에서 왼쪽으로)
+      2. Stack Push : 각 문자열과 Null byte (오른쪽에서 왼쪽으로)
                         +) 4의 배수로 padding 추가
       3. Stack Push : 각 값을 가르키는 stack Address
       4. Stack Push : Fake return Address 
   */ 
-  char *argv[64];
+  char *argv[64]; // 128bytes 제한 -> 최대 64개 (consider Null byte)
   int   argc = 0;
 
   char *token, *save_ptr;
@@ -82,19 +111,22 @@ static void start_process (void *file_name_)
   success = load (file_name, &if_.eip, &if_.esp); // User Program 로드
 
   /* If load failed, quit. */
-  palloc_free_page (file_name); // 복사한 파일명 메모리 해제
-  if (!success) 
+  if (!success) {
+    palloc_free_page (file_name);
     thread_exit ();
+  }    
 
   /* User Program 실행 전 Stack Argument Setting */
-  argument_passing(argv, argc, if_.esp);
-  if_.edi = 0;
-  if_.esi = 0;
+  argument_passing (argv, argc, if_.esp);
+  palloc_free_page (file_name);       // copy memory 해제
+  if_.edi = argc;                     // argc 개수 저장  
+  if_.esi = (uintptr_t)(if_.esp + 4); // argv 주소 저장
+
   // Stack print
-  hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
+  hex_dump((uintptr_t)if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
 
   /* Start the user process by simulating a return from an interrupt, 
-     implemented by intr_exit (in threads/intr-stubs.S).  
+    implemented by intr_exit (in threads/intr-stubs.S).  
      Because intr_exit takes all of its arguments on the stack in the form of a `struct intr_frame',
      we just point the stack pointer (%esp) to our stack frame and jump to it. */
   asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (&if_) : "memory");

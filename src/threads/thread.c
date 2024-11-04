@@ -177,7 +177,7 @@ tid_t thread_create (const char *name, int priority, thread_func *function, void
   tid = t->tid = allocate_tid ();
 
   /* Stack frame for kernel_thread(). */
-  kf = alloc_frame (t, sizeof *kf);
+  kf = alloc_frame(t, sizeof *kf);
   kf->eip = NULL;
   kf->function = function;
   kf->aux = aux;
@@ -235,12 +235,6 @@ void thread_unblock (struct thread *t)
   intr_set_level (old_level);
 }
 
-/* Returns the running thread's tid. */
-tid_t thread_tid (void) 
-{
-  return thread_current ()->tid;
-}
-
 /* Returns the name of the running thread. */
 const char * thread_name (void) 
 {
@@ -263,6 +257,12 @@ struct thread * thread_current (void)
   ASSERT (t->status == THREAD_RUNNING);
 
   return t;
+}
+
+/* Returns the running thread's tid. */
+tid_t thread_tid (void) 
+{
+  return thread_current ()->tid;
 }
 
 /* Deschedules the current thread and destroys it.  Never
@@ -303,6 +303,64 @@ void thread_yield (void)
   intr_set_level (old_level);
 }
 
+/* Invoke function 'func' on all threads, passing along 'aux'.
+   This function must be called with interrupts off. */
+void thread_foreach (thread_action_func *func, void *aux)
+{
+  struct list_elem *e;
+
+  ASSERT (intr_get_level () == INTR_OFF);
+
+  for (e = list_begin (&all_list); e != list_end (&all_list);
+       e = list_next (e))
+    {
+      struct thread *t = list_entry (e, struct thread, allelem);
+      func (t, aux);
+    }
+}
+
+/* Sets the current thread's priority to NEW_PRIORITY. */
+void thread_set_priority (int new_priority) 
+{
+  if (!thread_mlfqs) {
+    thread_current ()->origin_priority = new_priority;
+    set_cur_thread_priority();
+    check_priority_for_yield();
+  }
+}
+
+/* Returns the current thread's priority. */
+int thread_get_priority (void) 
+{
+  return thread_current ()->priority;
+}
+
+/* Sets the current thread's nice value to NICE. */
+void thread_set_nice (int nice UNUSED) 
+{
+  thread_current ()->nice = nice;
+  calculate_priority (thread_current(), NULL);
+  check_priority_for_yield();
+}
+
+/* Returns the current thread's nice value. */
+int thread_get_nice (void) 
+{
+  return thread_current()->nice;
+}
+
+/* Returns 100 times the system load average. */
+int thread_get_load_avg (void) 
+{
+  return conv_x_int_round(mul_x_n(load_avg, 100));
+}
+
+/* Returns 100 times the current thread's recent_cpu value. */
+int thread_get_recent_cpu (void) 
+{
+  return conv_x_int_round(mul_x_n(thread_current()->recent_cpu, 100));
+}
+
 /* Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by
@@ -315,8 +373,8 @@ void thread_yield (void)
 static void idle (void *idle_started_ UNUSED) 
 {
   struct semaphore *idle_started = idle_started_;
-  idle_thread = thread_current (); // idle 스레드 전역 변수 저장
-  sema_up (idle_started);          // "Main" 스레드를 wakeup()
+  idle_thread = thread_current ();
+  sema_up (idle_started);
 
   for (;;) 
     {
@@ -509,65 +567,7 @@ static tid_t allocate_tid (void)
 
   return tid;
 }
-
-/* Invoke function 'func' on all threads, passing along 'aux'.
-   This function must be called with interrupts off. */
-void thread_foreach (thread_action_func *func, void *aux)
-{
-  struct list_elem *e;
-
-  ASSERT (intr_get_level () == INTR_OFF);
-
-  for (e = list_begin (&all_list); e != list_end (&all_list);
-       e = list_next (e))
-    {
-      struct thread *t = list_entry (e, struct thread, allelem);
-      func (t, aux);
-    }
-}
-
-/* Sets the current thread's priority to NEW_PRIORITY. */
-void thread_set_priority (int new_priority) 
-{
-  if (!thread_mlfqs) {
-    thread_current ()->origin_priority = new_priority;
-    set_cur_thread_priority();
-    check_priority_for_yield();
-  }
-}
-
-/* Returns the current thread's priority. */
-int thread_get_priority (void) 
-{
-  return thread_current ()->priority;
-}
-
-/* Sets the current thread's nice value to NICE. */
-void thread_set_nice (int nice) 
-{
-  thread_current ()->nice = nice;
-  calculate_priority (thread_current(), NULL);
-  check_priority_for_yield();
-}
-
-/* Returns the current thread's nice value. */
-int thread_get_nice (void) 
-{
-  return thread_current()->nice;
-}
-
-/* Returns 100 times the system load average. */
-int thread_get_load_avg (void) 
-{
-  return conv_x_int_round(mul_x_n(load_avg, 100));
-}
-
-/* Returns 100 times the current thread's recent_cpu value. */
-int thread_get_recent_cpu (void) 
-{
-  return conv_x_int_round(mul_x_n(thread_current()->recent_cpu, 100));
-}
-
+
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
