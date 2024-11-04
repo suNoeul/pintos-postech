@@ -8,8 +8,7 @@
 const char *test_name;
 bool quiet = false;
 
-static void
-vmsg (const char *format, va_list args, const char *suffix) 
+static void vmsg (const char *format, va_list args, const char *suffix) 
 {
   /* We go to some trouble to stuff the entire message into a
      single buffer and output it in a single system call, because
@@ -24,8 +23,7 @@ vmsg (const char *format, va_list args, const char *suffix)
   write (STDOUT_FILENO, buf, strlen (buf));
 }
 
-void
-msg (const char *format, ...) 
+void msg (const char *format, ...) 
 {
   va_list args;
 

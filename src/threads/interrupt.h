@@ -46,8 +46,7 @@ struct intr_frame
        This frame pointer eases interpretation of backtraces. */
     void *frame_pointer;        /* Saved EBP (frame pointer). */
 
-    /* Pushed by the CPU.
-       These are the interrupted task's saved registers. */
+    /* Pushed by the CPU. These are the interrupted task's saved registers. */
     void (*eip) (void);         /* Next instruction to execute. */
     uint16_t cs, :16;           /* Code segment for eip. */
     uint32_t eflags;            /* Saved CPU flags. */

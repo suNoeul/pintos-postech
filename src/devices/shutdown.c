@@ -84,8 +84,7 @@ shutdown_reboot (void)
 
 /* Powers down the machine we're running on,
    as long as we're running on Bochs or QEMU. */
-void
-shutdown_power_off (void)
+void shutdown_power_off (void)
 {
   const char s[] = "Shutdown";
   const char *p;

@@ -219,8 +219,9 @@ strstr (const char *haystack, const char *needle)
    char s[] = "  String to  tokenize. ";
    char *token, *save_ptr;
 
-   for (token = strtok_r (s, " ", &save_ptr); token != NULL;
-        token = strtok_r (NULL, " ", &save_ptr))
+   for ( token = strtok_r (s, " ", &save_ptr); 
+         token != NULL;
+         token = strtok_r (NULL, " ", &save_ptr) )
      printf ("'%s'\n", token);
 
    outputs:
@@ -244,9 +245,8 @@ char * strtok_r (char *s, const char *delimiters, char **save_ptr)
 
   /* 구분자(DELIMITERS) Skip */
   while (strchr (delimiters, *s) != NULL) {
-    /* strchr() 은 항상 Non-NULL 값 반환
-       if, we're searching for a null byte, 
-       모든 문자열의 마지막엔 null byte 존재하기 때문에 */
+    /* if, we're searching for a null byte, strchr() 은 항상 Non-NULL 값 반환
+       -> 모든 문자열의 마지막엔 null byte 존재하기 때문에 */
     if (*s == '\0') {
       *save_ptr = s;  
       return NULL;
@@ -258,11 +258,13 @@ char * strtok_r (char *s, const char *delimiters, char **save_ptr)
   token = s;              // 토큰 위치 저장
   while (strchr (delimiters, *s) == NULL)
     s++;                  // Delimiters가 아닐 때까지 s++
+
   if (*s != '\0'){        // if, Delimiters를 찾으면  
       *s = '\0';          // Null 문자로 바꾸고
       *save_ptr = s + 1;  // 다음 위치 저장
   } else 
     *save_ptr = s;        // else, 문자열 끝이면 위치만 저장
+    
   return token;
 }
 
@@ -313,8 +315,7 @@ size_t strnlen (const char *string, size_t maxlen)
    increasingly popular extension.  See
    http://www.courtesan.com/todd/papers/strlcpy.html for
    information on strlcpy(). */
-size_t
-strlcpy (char *dst, const char *src, size_t size) 
+size_t strlcpy (char *dst, const char *src, size_t size) 
 {
   size_t src_len;
 

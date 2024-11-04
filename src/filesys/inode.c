@@ -58,8 +58,7 @@ byte_to_sector (const struct inode *inode, off_t pos)
 static struct list open_inodes;
 
 /* Initializes the inode module. */
-void
-inode_init (void) 
+void inode_init (void) 
 {
   list_init (&open_inodes);
 }

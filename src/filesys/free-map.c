@@ -9,8 +9,7 @@ static struct file *free_map_file;   /* Free map file. */
 static struct bitmap *free_map;      /* Free map, one bit per sector. */
 
 /* Initializes the free map. */
-void
-free_map_init (void) 
+void free_map_init (void) 
 {
   free_map = bitmap_create (block_size (fs_device));
   if (free_map == NULL)

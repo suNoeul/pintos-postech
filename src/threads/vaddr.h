@@ -66,10 +66,8 @@ is_kernel_vaddr (const void *vaddr)
   return vaddr >= PHYS_BASE;
 }
 
-/* Returns kernel virtual address at which physical address PADDR
-   is mapped. */
-static inline void *
-ptov (uintptr_t paddr)
+/* Returns kernel virtual address at which physical address PADDR is mapped. */
+static inline void * ptov (uintptr_t paddr)
 {
   ASSERT ((void *) paddr < PHYS_BASE);
 
