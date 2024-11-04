@@ -30,12 +30,11 @@ tid_t process_execute (const char *file_name)
   char *fn_copy;
   tid_t tid;
 
-  /* Make a copy of FILE_NAME.
-     Otherwise there's a race between the caller and load(). */
+  /* Make a copy of FILE_NAME. Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
   if (fn_copy == NULL)
     return TID_ERROR;
-  strlcpy (fn_copy, file_name, PGSIZE);
+  strlcpy (fn_copy, file_name, PGSIZE); // 복사 최대 길이 : PGSIZE - 1 (버퍼 오버플로우 방지)
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
@@ -44,32 +43,60 @@ tid_t process_execute (const char *file_name)
   return tid;
 }
 
+void argument_passing(char **argv, int argc, void **esp){
+  
+}
+
 /* A thread function that loads a user process and starts it
    running. */
 static void start_process (void *file_name_)
 {
-  char *file_name = file_name_;
-  struct intr_frame if_;
-  bool success;
+  char *file_name = file_name_; 
+  struct intr_frame if_;        // Interrupt Frame
+  bool success;                 // Program Load 성공 여부
 
   /* Initialize interrupt frame and load executable. */
-  memset (&if_, 0, sizeof if_);
-  if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
-  if_.cs = SEL_UCSEG;
-  if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
+  memset (&if_, 0, sizeof if_);                           // interrupt Frame 0으로 초기화
+  if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG; // Data segment 설정
+  if_.cs = SEL_UCSEG;                                     // Code segment 설정
+  if_.eflags = FLAG_IF | FLAG_MBS;                        // Flag 설정 : Interrupt Flag, Must be set
+  
+  /* 
+    Todo: Implementing Argument Paassing (by 80x86 Calling Convention)
+      1. 공백을 기준으로 단어 분할
+      2. Stack Push : 각 문자열과 Null Pointer (오른쪽에서 왼쪽으로)
+                        +) 4의 배수로 padding 추가
+      3. Stack Push : 각 값을 가르키는 stack Address
+      4. Stack Push : Fake return Address 
+  */ 
+  char *argv[64];
+  int   argc = 0;
+
+  char *token, *save_ptr;
+  for(token = strtok_r(file_name, " ", &save_ptr);
+      token != NULL;
+      token = strtok_r(file_name, " ", &save_ptr), argc++){
+    argv[argc] = token;
+  }
+
+  success = load (file_name, &if_.eip, &if_.esp); // User Program 로드
 
   /* If load failed, quit. */
-  palloc_free_page (file_name);
+  palloc_free_page (file_name); // 복사한 파일명 메모리 해제
   if (!success) 
     thread_exit ();
 
-  /* Start the user process by simulating a return from an
-     interrupt, implemented by intr_exit (in
-     threads/intr-stubs.S).  Because intr_exit takes all of its
-     arguments on the stack in the form of a `struct intr_frame',
-     we just point the stack pointer (%esp) to our stack frame
-     and jump to it. */
+  /* User Program 실행 전 Stack Argument Setting */
+  argument_passing(argv, argc, if_.esp);
+  if_.edi = 0;
+  if_.esi = 0;
+  // Stack print
+  hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
+
+  /* Start the user process by simulating a return from an interrupt, 
+     implemented by intr_exit (in threads/intr-stubs.S).  
+     Because intr_exit takes all of its arguments on the stack in the form of a `struct intr_frame',
+     we just point the stack pointer (%esp) to our stack frame and jump to it. */
   asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (&if_) : "memory");
   NOT_REACHED ();
 }
@@ -115,8 +142,7 @@ void process_exit (void)
     }
 }
 
-/* Sets up the CPU for running user code in the current
-   thread.
+/* Sets up the CPU for running user code in the current thread.
    This function is called on every context switch. */
 void process_activate (void)
 {
@@ -125,8 +151,7 @@ void process_activate (void)
   /* Activate thread's page tables. */
   pagedir_activate (t->pagedir);
 
-  /* Set thread's kernel stack for use in processing
-     interrupts. */
+  /* Set thread's kernel stack for use in processing interrupts. */
   tss_update ();
 }
 
@@ -203,8 +228,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    Stores the executable's entry point into *EIP
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
-bool
-load (const char *file_name, void (**eip) (void), void **esp) 
+bool load (const char *file_name, void (**eip) (void), void **esp) 
 {
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
@@ -320,8 +344,7 @@ static bool install_page (void *upage, void *kpage, bool writable);
 
 /* Checks whether PHDR describes a valid, loadable segment in
    FILE and returns true if so, false otherwise. */
-static bool
-validate_segment (const struct Elf32_Phdr *phdr, struct file *file) 
+static bool validate_segment (const struct Elf32_Phdr *phdr, struct file *file) 
 {
   /* p_offset and p_vaddr must have the same page offset. */
   if ((phdr->p_offset & PGMASK) != (phdr->p_vaddr & PGMASK)) 
@@ -377,8 +400,7 @@ validate_segment (const struct Elf32_Phdr *phdr, struct file *file)
 
    Return true if successful, false if a memory allocation error
    or disk read error occurs. */
-static bool
-load_segment (struct file *file, off_t ofs, uint8_t *upage,
+static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
               uint32_t read_bytes, uint32_t zero_bytes, bool writable) 
 {
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
@@ -422,10 +444,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   return true;
 }
 
-/* Create a minimal stack by mapping a zeroed page at the top of
-   user virtual memory. */
-static bool
-setup_stack (void **esp) 
+/* Create a minimal stack by mapping a zeroed page at the top of user virtual memory. */
+static bool setup_stack (void **esp) 
 {
   uint8_t *kpage;
   bool success = false;
@@ -451,8 +471,7 @@ setup_stack (void **esp)
    with palloc_get_page().
    Returns true on success, false if UPAGE is already mapped or
    if memory allocation fails. */
-static bool
-install_page (void *upage, void *kpage, bool writable)
+static bool install_page (void *upage, void *kpage, bool writable)
 {
   struct thread *t = thread_current ();
 
