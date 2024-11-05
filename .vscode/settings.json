@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "stdbool.h": "c",
+        "*.inc": "c",
+        "syscall.h": "c",
+        "file.h": "c",
+        "off_t.h": "c"
+    }
+}
