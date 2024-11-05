@@ -129,9 +129,9 @@ tid_t thread_create (const char *name, int priority, thread_func *, void *);
 void thread_block (void);
 void thread_unblock (struct thread *);
 
-struct thread *thread_current (void);
 tid_t thread_tid (void);
 const char *thread_name (void);
+struct thread *thread_current (void);
 
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
@@ -140,13 +140,13 @@ void thread_yield (void);
 typedef void thread_action_func (struct thread *t, void *aux);
 void thread_foreach (thread_action_func *, void *);
 
+void thread_set_priority (int new_priority);
 int thread_get_priority (void);
-void thread_set_priority (int);
 
-int thread_get_nice (void);
 void thread_set_nice (int nice UNUSED);
-int thread_get_recent_cpu (void);
+int thread_get_nice (void);
 int thread_get_load_avg (void);
+int thread_get_recent_cpu (void);
 
 /* [project1] Alarm Clock */
 bool compare_alarm_tick (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
