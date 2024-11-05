@@ -47,34 +47,34 @@ tid_t process_execute (const char *file_name)
   return tid;
 }
 
-void argument_passing(char **argv, int argc, void *esp){
+void argument_passing(char **argv, int argc, void **esp){
   char *arg_stack_addr[64];
 
   // Step1. Push each argv[i] value
   for(int i = argc-1; i >= 0; i-- ){
     int len = strlen(argv[i]) + 1; // null byte 고려(+1)
-    esp -= len ;                   // user stack pointer : len만큼 push
-    memcpy(esp, argv[i], len);       
-    arg_stack_addr[i] = esp;       // Save : stack pointer address 
+    *esp -= len ;                   // user stack pointer : len만큼 push
+    memcpy(*esp, argv[i], len);       
+    arg_stack_addr[i] = *esp;       // Save : stack pointer address 
   }
 
   // Step2. word-align :  multiple of 4
-  while((uintptr_t)esp % 4 != 0){
-    esp--; 
-    *(uint8_t *)esp = 0;
+  while((uintptr_t)*esp % 4 != 0){
+    (*esp)--; 
+    *(uint8_t *)(*esp) = 0;
   }
 
   // Step3. Push each arg_stack_address
-  esp -= 4; // Address of "argv[argc] = 0"
-  *(uint32_t *)esp = 0;
+  *esp -= 4; // Address of "argv[argc] = 0"
+  *(uint32_t *)(*esp) = 0;
   for(int i = argc-1; i >= 0; i--){
-    esp -= 4;
-    *(char **)esp = arg_stack_addr[i];
+    *esp -= 4;
+    *(char **)(*esp) = arg_stack_addr[i];
   }
 
   // Step4. Push fake return address
-  esp -= 4;
-  *(uint32_t *)esp = 0;
+  *esp -= 4;
+  *(uint32_t *)(*esp) = 0;
 }
 
 /* A thread function that loads a user process and starts it running. */
@@ -104,7 +104,7 @@ static void start_process (void *file_name_)
   char *token, *save_ptr;
   for(token = strtok_r(file_name, " ", &save_ptr);
       token != NULL;
-      token = strtok_r(file_name, " ", &save_ptr), argc++){
+      token = strtok_r(NULL, " ", &save_ptr), argc++){
     argv[argc] = token;
   }
 
@@ -115,13 +115,13 @@ static void start_process (void *file_name_)
     palloc_free_page (file_name);
     thread_exit ();
   }    
-
+  
   /* User Program 실행 전 Stack Argument Setting */
-  argument_passing (argv, argc, if_.esp);
+  argument_passing (argv, argc, &if_.esp);
   palloc_free_page (file_name);       // copy memory 해제
   if_.edi = argc;                     // argc 개수 저장  
   if_.esi = (uintptr_t)(if_.esp + 4); // argv 주소 저장
-
+  
   // Stack print
   hex_dump((uintptr_t)if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
 
