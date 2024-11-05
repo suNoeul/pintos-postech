@@ -126,9 +126,9 @@ static void start_process (void *file_name_)
   
   /* User Program 실행 전 Stack Argument Setting */
   argument_passing (argv, argc, &if_.esp);
+  palloc_free_page (file_name);       // copy memory 해제
   if_.edi = argc;                     // argc 개수 저장  
   if_.esi = (uintptr_t)(if_.esp + 4); // argv 주소 저장
-  palloc_free_page (file_name);       // copy memory 해제
     
   // Stack print
   hex_dump((uintptr_t)if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
