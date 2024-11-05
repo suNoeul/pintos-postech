@@ -61,8 +61,7 @@ void intr_handler (struct intr_frame *args);
 static void unexpected_interrupt (const struct intr_frame *);
 
 /* Returns the current interrupt status. */
-enum intr_level
-intr_get_level (void) 
+enum intr_level intr_get_level (void) 
 {
   uint32_t flags;
 
@@ -77,15 +76,13 @@ intr_get_level (void)
 
 /* Enables or disables interrupts as specified by LEVEL and
    returns the previous interrupt status. */
-enum intr_level
-intr_set_level (enum intr_level level) 
+enum intr_level intr_set_level (enum intr_level level) 
 {
   return level == INTR_ON ? intr_enable () : intr_disable ();
 }
 
 /* Enables interrupts and returns the previous interrupt status. */
-enum intr_level
-intr_enable (void) 
+enum intr_level intr_enable (void) 
 {
   enum intr_level old_level = intr_get_level ();
   ASSERT (!intr_context ());
@@ -100,8 +97,7 @@ intr_enable (void)
 }
 
 /* Disables interrupts and returns the previous interrupt status. */
-enum intr_level
-intr_disable (void) 
+enum intr_level intr_disable (void) 
 {
   enum intr_level old_level = intr_get_level ();
 
@@ -114,8 +110,7 @@ intr_disable (void)
 }
 
 /* Initializes the interrupt system. */
-void
-intr_init (void)
+void intr_init (void)
 {
   uint64_t idtr_operand;
   int i;
@@ -161,8 +156,7 @@ intr_init (void)
    privilege level DPL.  Names the interrupt NAME for debugging
    purposes.  The interrupt handler will be invoked with
    interrupt status set to LEVEL. */
-static void
-register_handler (uint8_t vec_no, int dpl, enum intr_level level,
+static void register_handler (uint8_t vec_no, int dpl, enum intr_level level,
                   intr_handler_func *handler, const char *name)
 {
   ASSERT (intr_handlers[vec_no] == NULL);
@@ -177,8 +171,7 @@ register_handler (uint8_t vec_no, int dpl, enum intr_level level,
 /* Registers external interrupt VEC_NO to invoke HANDLER, which
    is named NAME for debugging purposes.  The handler will
    execute with interrupts disabled. */
-void
-intr_register_ext (uint8_t vec_no, intr_handler_func *handler,
+void intr_register_ext (uint8_t vec_no, intr_handler_func *handler,
                    const char *name) 
 {
   ASSERT (vec_no >= 0x20 && vec_no <= 0x2f);
@@ -198,8 +191,7 @@ intr_register_ext (uint8_t vec_no, intr_handler_func *handler,
    [IA32-v3a] sections 4.5 "Privilege Levels" and 4.8.1.1
    "Accessing Nonconforming Code Segments" for further
    discussion. */
-void
-intr_register_int (uint8_t vec_no, int dpl, enum intr_level level,
+void intr_register_int (uint8_t vec_no, int dpl, enum intr_level level,
                    intr_handler_func *handler, const char *name)
 {
   ASSERT (vec_no < 0x20 || vec_no > 0x2f);
@@ -208,8 +200,7 @@ intr_register_int (uint8_t vec_no, int dpl, enum intr_level level,
 
 /* Returns true during processing of an external interrupt
    and false at all other times. */
-bool
-intr_context (void) 
+bool intr_context (void) 
 {
   return in_external_intr;
 }
@@ -218,8 +209,7 @@ intr_context (void)
    interrupt handler to yield to a new process just before
    returning from the interrupt.  May not be called at any other
    time. */
-void
-intr_yield_on_return (void) 
+void intr_yield_on_return (void) 
 {
   ASSERT (intr_context ());
   yield_on_return = true;
@@ -234,8 +224,7 @@ intr_yield_on_return (void)
    traps and exceptions, so we reprogram the PICs so that
    interrupts 0...15 are delivered to interrupt vectors 32...47
    (0x20...0x2f) instead. */
-static void
-pic_init (void)
+static void pic_init (void)
 {
   /* Mask all interrupts on both PICs. */
   outb (PIC0_DATA, 0xff);
@@ -261,8 +250,7 @@ pic_init (void)
 /* Sends an end-of-interrupt signal to the PIC for the given IRQ.
    If we don't acknowledge the IRQ, it will never be delivered to
    us again, so this is important.  */
-static void
-pic_end_of_interrupt (int irq) 
+static void pic_end_of_interrupt (int irq) 
 {
   ASSERT (irq >= 0x20 && irq < 0x30);
 
@@ -290,8 +278,7 @@ pic_end_of_interrupt (int irq)
    disables interrupts, but entering a trap gate does not.  See
    [IA32-v3a] section 5.12.1.2 "Flag Usage By Exception- or
    Interrupt-Handler Procedure" for discussion. */
-static uint64_t
-make_gate (void (*function) (void), int dpl, int type)
+static uint64_t make_gate (void (*function) (void), int dpl, int type)
 {
   uint32_t e0, e1;
 
@@ -313,24 +300,21 @@ make_gate (void (*function) (void), int dpl, int type)
 
 /* Creates an interrupt gate that invokes FUNCTION with the given
    DPL. */
-static uint64_t
-make_intr_gate (void (*function) (void), int dpl)
+static uint64_t make_intr_gate (void (*function) (void), int dpl)
 {
   return make_gate (function, dpl, 14);
 }
 
 /* Creates a trap gate that invokes FUNCTION with the given
    DPL. */
-static uint64_t
-make_trap_gate (void (*function) (void), int dpl)
+static uint64_t make_trap_gate (void (*function) (void), int dpl)
 {
   return make_gate (function, dpl, 15);
 }
 
 /* Returns a descriptor that yields the given LIMIT and BASE when
    used as an operand for the LIDT instruction. */
-static inline uint64_t
-make_idtr_operand (uint16_t limit, void *base)
+static inline uint64_t make_idtr_operand (uint16_t limit, void *base)
 {
   return limit | ((uint64_t) (uint32_t) base << 16);
 }
@@ -341,8 +325,7 @@ make_idtr_operand (uint16_t limit, void *base)
    function is called by the assembly language interrupt stubs in
    intr-stubs.S.  FRAME describes the interrupt and the
    interrupted thread's registers. */
-void
-intr_handler (struct intr_frame *frame) 
+void intr_handler (struct intr_frame *frame) 
 {
   bool external;
   intr_handler_func *handler;
@@ -390,8 +373,7 @@ intr_handler (struct intr_frame *frame)
 
 /* Handles an unexpected interrupt with interrupt frame F.  An
    unexpected interrupt is one that has no registered handler. */
-static void
-unexpected_interrupt (const struct intr_frame *f)
+static void unexpected_interrupt (const struct intr_frame *f)
 {
   /* Count the number so far. */
   unsigned int n = ++unexpected_cnt[f->vec_no];
@@ -407,8 +389,7 @@ unexpected_interrupt (const struct intr_frame *f)
 }
 
 /* Dumps interrupt frame F to the console, for debugging. */
-void
-intr_dump_frame (const struct intr_frame *f) 
+void intr_dump_frame (const struct intr_frame *f) 
 {
   uint32_t cr2;
 
@@ -431,8 +412,7 @@ intr_dump_frame (const struct intr_frame *f)
 }
 
 /* Returns the name of interrupt VEC. */
-const char *
-intr_name (uint8_t vec) 
+const char * intr_name (uint8_t vec) 
 {
   return intr_names[vec];
 }

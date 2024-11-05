@@ -68,8 +68,7 @@ static struct arena *block_to_arena (struct block *);
 static struct block *arena_to_block (struct arena *, size_t idx);
 
 /* Initializes the malloc() descriptors. */
-void
-malloc_init (void) 
+void malloc_init (void) 
 {
   size_t block_size;
 

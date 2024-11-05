@@ -40,12 +40,11 @@ static void init_pool (struct pool *, void *base, size_t page_cnt,
                        const char *name);
 static bool page_from_pool (const struct pool *, void *page);
 
-/* Initializes the page allocator.  At most USER_PAGE_LIMIT
-   pages are put into the user pool. */
-void
-palloc_init (size_t user_page_limit)
+/* Initializes the page allocator.  At most USER_PAGE_LIMIT pages are put into the user pool. */
+void palloc_init (size_t user_page_limit)
 {
   /* Free memory starts at 1 MB and runs to the end of RAM. */
+  /* 1MB 이전 공간은 보통 BIOS, 부트 로더와 같은 시스템 초기화 과정에 사용 */
   uint8_t *free_start = ptov (1024 * 1024);
   uint8_t *free_end = ptov (init_ram_pages * PGSIZE);
   size_t free_pages = (free_end - free_start) / PGSIZE;
@@ -57,8 +56,7 @@ palloc_init (size_t user_page_limit)
 
   /* Give half of memory to kernel, half to user. */
   init_pool (&kernel_pool, free_start, kernel_pages, "kernel pool");
-  init_pool (&user_pool, free_start + kernel_pages * PGSIZE,
-             user_pages, "user pool");
+  init_pool (&user_pool, free_start + kernel_pages * PGSIZE, user_pages, "user pool");
 }
 
 /* Obtains and returns a group of PAGE_CNT contiguous free pages.
@@ -67,8 +65,7 @@ palloc_init (size_t user_page_limit)
    then the pages are filled with zeros.  If too few pages are
    available, returns a null pointer, unless PAL_ASSERT is set in
    FLAGS, in which case the kernel panics. */
-void *
-palloc_get_multiple (enum palloc_flags flags, size_t page_cnt)
+void * palloc_get_multiple (enum palloc_flags flags, size_t page_cnt)
 {
   struct pool *pool = flags & PAL_USER ? &user_pool : &kernel_pool;
   void *pages;
@@ -86,16 +83,14 @@ palloc_get_multiple (enum palloc_flags flags, size_t page_cnt)
   else
     pages = NULL;
 
-  if (pages != NULL) 
-    {
-      if (flags & PAL_ZERO)
-        memset (pages, 0, PGSIZE * page_cnt);
-    }
-  else 
-    {
-      if (flags & PAL_ASSERT)
-        PANIC ("palloc_get: out of pages");
-    }
+  if (pages != NULL) {
+    if (flags & PAL_ZERO)
+      memset (pages, 0, PGSIZE * page_cnt);
+  }
+  else {
+    if (flags & PAL_ASSERT)
+      PANIC ("palloc_get: out of pages");
+  }
 
   return pages;
 }
@@ -107,8 +102,7 @@ palloc_get_multiple (enum palloc_flags flags, size_t page_cnt)
    then the page is filled with zeros.  If no pages are
    available, returns a null pointer, unless PAL_ASSERT is set in
    FLAGS, in which case the kernel panics. */
-void *
-palloc_get_page (enum palloc_flags flags) 
+void * palloc_get_page (enum palloc_flags flags) 
 {
   return palloc_get_multiple (flags, 1);
 }
@@ -150,29 +144,25 @@ palloc_free_page (void *page)
 
 /* Initializes pool P as starting at START and ending at END,
    naming it NAME for debugging purposes. */
-static void
-init_pool (struct pool *p, void *base, size_t page_cnt, const char *name) 
+static void init_pool (struct pool *p, void *base, size_t page_cnt, const char *name) 
 {
-  /* We'll put the pool's used_map at its base.
-     Calculate the space needed for the bitmap
-     and subtract it from the pool's size. */
-  size_t bm_pages = DIV_ROUND_UP (bitmap_buf_size (page_cnt), PGSIZE);
+  /* We'll put the pool's used_map at its base. 
+     Calculate the space needed for the bitmap and subtract it from the pool's size. */
+  size_t bm_pages = DIV_ROUND_UP (bitmap_buf_size (page_cnt), PGSIZE); 
   if (bm_pages > page_cnt)
     PANIC ("Not enough memory in %s for bitmap.", name);
-  page_cnt -= bm_pages;
+  page_cnt -= bm_pages; // bm_pages : bit_map 할당에 필요한 페이지 수
 
   printf ("%zu pages available in %s.\n", page_cnt, name);
 
   /* Initialize the pool. */
   lock_init (&p->lock);
   p->used_map = bitmap_create_in_buf (page_cnt, base, bm_pages * PGSIZE);
-  p->base = base + bm_pages * PGSIZE;
+  p->base = base + bm_pages * PGSIZE; // bit_map이 차지한 공간만큼 base를 이동
 }
 
-/* Returns true if PAGE was allocated from POOL,
-   false otherwise. */
-static bool
-page_from_pool (const struct pool *pool, void *page) 
+/* Returns true if PAGE was allocated from POOL, false otherwise. */
+static bool page_from_pool (const struct pool *pool, void *page) 
 {
   size_t page_no = pg_no (page);
   size_t start_page = pg_no (pool->base);

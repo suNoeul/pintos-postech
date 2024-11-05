@@ -73,8 +73,7 @@ static void locate_block_device (enum block_type, const char *name);
 int main (void) NO_RETURN;
 
 /* Pintos main program. */
-int
-main (void)
+int main (void)
 {
   char **argv;
 
@@ -91,8 +90,7 @@ main (void)
   console_init ();  
 
   /* Greet user. */
-  printf ("Pintos booting with %'"PRIu32" kB RAM...\n",
-          init_ram_pages * PGSIZE / 1024);
+  printf ("Pintos booting with %'"PRIu32" kB RAM...\n", init_ram_pages * PGSIZE / 1024);
 
   /* Initialize memory system. */
   palloc_init (user_page_limit);
@@ -143,8 +141,7 @@ main (void)
 
    The start and end of the BSS segment is recorded by the
    linker as _start_bss and _end_bss.  See kernel.lds. */
-static void
-bss_init (void) 
+static void bss_init (void) 
 {
   extern char _start_bss, _end_bss;
   memset (&_start_bss, 0, &_end_bss - &_start_bss);
@@ -154,8 +151,7 @@ bss_init (void)
    kernel virtual mapping, and then sets up the CPU to use the
    new page directory.  Points init_page_dir to the page
    directory it creates. */
-static void
-paging_init (void)
+static void paging_init (void)
 {
   uint32_t *pd, *pt;
   size_t page;
@@ -188,81 +184,80 @@ paging_init (void)
   asm volatile ("movl %0, %%cr3" : : "r" (vtop (init_page_dir)));
 }
 
-/* Breaks the kernel command line into words and returns them as
-   an argv-like array. */
-static char **
-read_command_line (void) 
+/* Breaks the kernel command line into words and returns them as an argv-like array. */
+static char ** read_command_line (void) 
 {
-  static char *argv[LOADER_ARGS_LEN / 2 + 1];
+  static char *argv[LOADER_ARGS_LEN / 2 + 1]; // 최대 많은 인자 들어온다고 가정 ('\0'과 NULL Pointer 공간 고려)
   char *p, *end;
   int argc;
   int i;
 
-  argc = *(uint32_t *) ptov (LOADER_ARG_CNT);
-  p = ptov (LOADER_ARGS);
-  end = p + LOADER_ARGS_LEN;
+  argc = *(uint32_t *) ptov (LOADER_ARG_CNT); 
+  p = ptov (LOADER_ARGS);     // p : 명령 인자의 시작 주소
+  end = p + LOADER_ARGS_LEN;  // end : 메모리 버퍼 끝 주소
   for (i = 0; i < argc; i++) 
     {
       if (p >= end)
         PANIC ("command line arguments overflow");
 
       argv[i] = p;
-      p += strnlen (p, end - p) + 1;
+      
+      /* strnlen() : p부터 문자열 끝('\0')까지 길이 계산 */
+      p += strnlen (p, end - p) + 1; 
     }
   argv[argc] = NULL;
 
   /* Print kernel command line. */
   printf ("Kernel command line:");
   for (i = 0; i < argc; i++)
+    /* strchr() : 문자열에서 특정 문자를 찾는 함수 */
     if (strchr (argv[i], ' ') == NULL)
-      printf (" %s", argv[i]);
+      printf (" %s", argv[i]);    // 공백이 없으면 그냥 출력
     else
-      printf (" '%s'", argv[i]);
+      printf (" '%s'", argv[i]);  // 공백이 있으면 따옴표 감싸서 출력
   printf ("\n");
 
   return argv;
 }
 
-/* Parses options in ARGV[]
-   and returns the first non-option argument. */
-static char **
-parse_options (char **argv) 
+/* Parses options in ARGV[] and returns the first non-option argument. */
+static char ** parse_options (char **argv) 
 {
-  for (; *argv != NULL && **argv == '-'; argv++)
-    {
+  // 모든 옵션은 맨 앞에 배치하도록 구현되어 있음. 
+  for (; *argv != NULL && **argv == '-'; argv++) {
       char *save_ptr;
-      char *name = strtok_r (*argv, "=", &save_ptr);
-      char *value = strtok_r (NULL, "", &save_ptr);
+      char *name = strtok_r (*argv, "=", &save_ptr);  // option name 분리
+      char *value = strtok_r (NULL, "", &save_ptr);   // option value 분리
       
-      if (!strcmp (name, "-h"))
+      if (!strcmp (name, "-h"))       // 도움말
         usage ();
-      else if (!strcmp (name, "-q"))
+      else if (!strcmp (name, "-q"))  // 종료 
         shutdown_configure (SHUTDOWN_POWER_OFF);
-      else if (!strcmp (name, "-r"))
+      else if (!strcmp (name, "-r"))  // 재부팅 
         shutdown_configure (SHUTDOWN_REBOOT);
 #ifdef FILESYS
-      else if (!strcmp (name, "-f"))
+      else if (!strcmp (name, "-f"))  // 파일시스템 포멧
         format_filesys = true;
-      else if (!strcmp (name, "-filesys"))
+      else if (!strcmp (name, "-filesys"))  // 파일시스템 장치 이름 설정
         filesys_bdev_name = value;
-      else if (!strcmp (name, "-scratch"))
+      else if (!strcmp (name, "-scratch"))  // 임시 장치 이름 설정
         scratch_bdev_name = value;
 #ifdef VM
-      else if (!strcmp (name, "-swap"))
+      else if (!strcmp (name, "-swap")) 
         swap_bdev_name = value;
 #endif
 #endif
-      else if (!strcmp (name, "-rs"))
+      else if (!strcmp (name, "-rs"))       // 랜덤 시드 설정
         random_init (atoi (value));
-      else if (!strcmp (name, "-mlfqs"))
+      else if (!strcmp (name, "-mlfqs"))    // MLFQS 스케줄러 활성화 
         thread_mlfqs = true;
 #ifdef USERPROG
-      else if (!strcmp (name, "-ul"))
+      else if (!strcmp (name, "-ul"))       // 유저 페이지 제한 설정
         user_page_limit = atoi (value);
 #endif
       else
         PANIC ("unknown option `%s' (use -h for help)", name);
-    }
+  }
 
   /* Initialize the random number generator based on the system
      time.  This has no effect if an "-rs" option was specified.
@@ -272,14 +267,13 @@ parse_options (char **argv)
      initial time to a predictable value, not to the local time,
      for reproducibility.  To fix this, give the "-r" option to
      the pintos script to request real-time execution. */
-  random_init (rtc_get_time ());
+  random_init (rtc_get_time ()); // 랜덤 초기화: "-rs" 옵션이 없으면 시스템 시간 사용
   
-  return argv;
+  return argv; // 옵션이 아닌 첫 번째 인자 주소 반환
 }
 
 /* Runs the task specified in ARGV[1]. */
-static void
-run_task (char **argv)
+static void run_task (char **argv)
 {
   const char *task = argv[1];
   
@@ -294,8 +288,7 @@ run_task (char **argv)
 
 /* Executes all of the actions specified in ARGV[]
    up to the null pointer sentinel. */
-static void
-run_actions (char **argv) 
+static void run_actions (char **argv) 
 {
   /* An action. */
   struct action 
@@ -308,45 +301,43 @@ run_actions (char **argv)
   /* Table of supported actions. */
   static const struct action actions[] = 
     {
-      {"run", 2, run_task},
+      {"run", 2, run_task},             // 유저 프로그램 실행
 #ifdef FILESYS
-      {"ls", 1, fsutil_ls},
-      {"cat", 2, fsutil_cat},
-      {"rm", 2, fsutil_rm},
-      {"extract", 1, fsutil_extract},
-      {"append", 2, fsutil_append},
+      {"ls", 1, fsutil_ls},             // 파일 리스트 출력
+      {"cat", 2, fsutil_cat},           // 파일 내용 출력
+      {"rm", 2, fsutil_rm},             // 파일 삭제
+      {"extract", 1, fsutil_extract},   // 아카이브 추출
+      {"append", 2, fsutil_append},     // 파일에 내용 추가
 #endif
-      {NULL, 0, NULL},
+      {NULL, 0, NULL},                  // 더 이상 유효한 명령어가 없음을 알리는 종료 조건
     };
 
-  while (*argv != NULL)
-    {
-      const struct action *a;
-      int i;
+  while (*argv != NULL) {
+    const struct action *a;
+    int i;
 
-      /* Find action name. */
-      for (a = actions; ; a++)
-        if (a->name == NULL)
-          PANIC ("unknown action `%s' (use -h for help)", *argv);
-        else if (!strcmp (*argv, a->name))
-          break;
+    /* Find action name. */
+    for (a = actions; ; a++)
+      if (a->name == NULL)
+        PANIC ("unknown action `%s' (use -h for help)", *argv);
+      else if (!strcmp (*argv, a->name))
+        break;
 
-      /* Check for required arguments. */
-      for (i = 1; i < a->argc; i++)
-        if (argv[i] == NULL)
-          PANIC ("action `%s' requires %d argument(s)", *argv, a->argc - 1);
+    /* Check for required arguments. */
+    for (i = 1; i < a->argc; i++)
+      if (argv[i] == NULL)
+        PANIC ("action `%s' requires %d argument(s)", *argv, a->argc - 1);
 
-      /* Invoke action and advance. */
-      a->function (argv);
-      argv += a->argc;
-    }
+    /* Invoke action and advance. */
+    a->function (argv);
+    argv += a->argc;
+  }
   
 }
 
 /* Prints a kernel command line help message and powers off the
    machine. */
-static void
-usage (void)
+static void usage (void)
 {
   printf ("\nCommand line syntax: [OPTION...] [ACTION...]\n"
           "Options must precede actions.\n"

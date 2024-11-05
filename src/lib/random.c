@@ -30,8 +30,7 @@ swap_byte (uint8_t *a, uint8_t *b)
 }
 
 /* Initializes or reinitializes the PRNG with the given SEED. */
-void
-random_init (unsigned seed)
+void random_init (unsigned seed)
 {
   uint8_t *seedp = (uint8_t *) &seed;
   int i;
@@ -40,14 +39,17 @@ random_init (unsigned seed)
   if (inited)
     return;
 
+  // Step1. S배열 초기화
   for (i = 0; i < 256; i++) 
     s[i] = i;
-  for (i = j = 0; i < 256; i++) 
-    {
-      j += s[i] + seedp[i % sizeof seed];
-      swap_byte (s + i, s + j);
-    }
 
+  // Step2. RC4 초기화 알고리즘
+  for (i = j = 0; i < 256; i++) {
+    j += s[i] + seedp[i % sizeof seed];
+    swap_byte (s + i, s + j);
+  }
+
+  // Step3. index 및 init_flag 설정
   s_i = s_j = 0;
   inited = true;
 }

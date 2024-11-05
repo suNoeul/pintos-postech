@@ -143,7 +143,7 @@ void thread_foreach (thread_action_func *, void *);
 void thread_set_priority (int new_priority);
 int thread_get_priority (void);
 
-void thread_set_nice (int nice);
+void thread_set_nice (int nice UNUSED);
 int thread_get_nice (void);
 int thread_get_load_avg (void);
 int thread_get_recent_cpu (void);

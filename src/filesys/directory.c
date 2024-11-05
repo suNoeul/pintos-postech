@@ -31,8 +31,7 @@ dir_create (block_sector_t sector, size_t entry_cnt)
 
 /* Opens and returns the directory for the given INODE, of which
    it takes ownership.  Returns a null pointer on failure. */
-struct dir *
-dir_open (struct inode *inode) 
+struct dir * dir_open (struct inode *inode) 
 {
   struct dir *dir = calloc (1, sizeof *dir);
   if (inode != NULL && dir != NULL)
@@ -51,8 +50,7 @@ dir_open (struct inode *inode)
 
 /* Opens the root directory and returns a directory for it.
    Return true if successful, false on failure. */
-struct dir *
-dir_open_root (void)
+struct dir * dir_open_root (void)
 {
   return dir_open (inode_open (ROOT_DIR_SECTOR));
 }

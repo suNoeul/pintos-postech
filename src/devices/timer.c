@@ -166,7 +166,7 @@ static void timer_interrupt (struct intr_frame *args UNUSED)
       calculate_all_recent_cpu();
     }
     if(ticks % 4 == 0) {
-      calculate_all_priority();   
+      calculate_all_priority();    
       sort_readylist(); 
     }
   }
