@@ -543,7 +543,7 @@ int thread_get_priority (void)
 }
 
 /* Sets the current thread's nice value to NICE. */
-void thread_set_nice (int nice) 
+void thread_set_nice (int nice UNUSED) 
 {
   thread_current ()->nice = nice;
   calculate_priority (thread_current(), NULL);
