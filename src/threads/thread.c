@@ -636,8 +636,12 @@ void check_priority_for_yield(void)
     struct thread *current_thread = thread_current();
     struct thread *highest_thread = list_entry(list_front(&ready_list), struct thread, elem);
 
-    if(current_thread->priority < highest_thread->priority) 
-      thread_yield();
+    if(current_thread->priority < highest_thread->priority){
+      if(intr_context())
+        intr_yield_on_return();
+      else
+        thread_yield();
+    }
   }
 }
 
