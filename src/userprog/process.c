@@ -31,6 +31,7 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t process_execute (const char *file_name) 
 {
+  char  pg_name[128];
   char *fn_copy;
   tid_t tid;
 
@@ -40,8 +41,13 @@ tid_t process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE); // 복사 최대 길이 : PGSIZE - 1 (버퍼 오버플로우 방지)
 
+  /* Make a copy of PROGRAM_NAME */
+  size_t length = strcspn(fn_copy, " ");
+  strlcpy(pg_name, fn_copy, length);
+  pg_name[length] = '\0';
+
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (pg_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -52,7 +58,7 @@ void argument_passing(char **argv, int argc, void **esp){
 
   // Step1. Push each argv[i] value
   for(int i = argc-1; i >= 0; i-- ){
-    int len = strlen(argv[i]) + 1; // null byte 고려(+1)
+    int len = strlen(argv[i]) + 1;  // null byte 고려(+1)
     *esp -= len ;                   // user stack pointer : len만큼 push
     memcpy(*esp, argv[i], len);       
     arg_stack_addr[i] = *esp;       // Save : stack pointer address 
@@ -64,11 +70,13 @@ void argument_passing(char **argv, int argc, void **esp){
     *(uint8_t *)(*esp) = 0;
   }
 
-  // Step3. Push each arg_stack_address
-  *esp -= 4; // Address of "argv[argc] = 0"
+  // Step3-1. Push address of argv[argc] : null pointer
+  *esp -= sizeof(char *); // Address of "argv[argc] = 0"
   *(uint32_t *)(*esp) = 0;
+
+  // Step3-2. Push each arg_stack_address
   for(int i = argc-1; i >= 0; i--){
-    *esp -= 4;
+    *esp -= sizeof(char *);
     *(char **)(*esp) = arg_stack_addr[i];
   }
 
@@ -107,7 +115,7 @@ static void start_process (void *file_name_)
       token = strtok_r(NULL, " ", &save_ptr), argc++){
     argv[argc] = token;
   }
-
+  
   success = load (file_name, &if_.eip, &if_.esp); // User Program 로드
 
   /* If load failed, quit. */
@@ -118,10 +126,10 @@ static void start_process (void *file_name_)
   
   /* User Program 실행 전 Stack Argument Setting */
   argument_passing (argv, argc, &if_.esp);
-  palloc_free_page (file_name);       // copy memory 해제
   if_.edi = argc;                     // argc 개수 저장  
   if_.esi = (uintptr_t)(if_.esp + 4); // argv 주소 저장
-  
+  palloc_free_page (file_name);       // copy memory 해제
+    
   // Stack print
   hex_dump((uintptr_t)if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
 
