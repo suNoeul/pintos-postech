@@ -3,8 +3,15 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
+#include "userprog/pagedir.h"
+
+
+/* Process identifier. */
+typedef int pid_t;
 
 static void syscall_handler (struct intr_frame *);
+void check_address();
 
 void syscall_init (void) 
 {
@@ -13,16 +20,63 @@ void syscall_init (void)
  
 static void syscall_handler (struct intr_frame *f UNUSED) 
 {
-  printf ("system call!\n");
-  thread_exit ();
+  int syscall_number = f->eax;
 
-  // syscall Number에 따라 switch 구문
-  // Stack Pointer, Address argument : is_user_vaddr?
-  // 유저 스택 인자들 커널 저장
-  // %eax = return value 
+  switch(syscall_number){
+    case SYS_HALT:
+      printf("halt!\n");
+      halt();
+      break;
+    case SYS_EXIT:
+      printf("exit!\n");
+      exit(f->edi);
+      break;
+    case SYS_EXEC:
+      printf("exec!\n");
+      exec(f->edi);
+      break;
+    case SYS_WAIT:
+      printf("wait!\n");
+      f->eax = wait(f->edi);
+      break;
+    case SYS_CREATE:
+      break;
+    case SYS_REMOVE:
+      break;
+    case SYS_OPEN:
+      break;
+    case SYS_FILESIZE:
+      break;
+    case SYS_READ:
+      break;
+    case SYS_WRITE:
+      break;
+    case SYS_SEEK:
+      break;
+    case SYS_TELL:
+      break;
+    case SYS_CLOSE:
+      break;
+    default:
+      // exit(-1);
+      printf ("system call!\n");
+      thread_exit ();
+  }
 }
 
-/*
+void check_address(const void *addr)
+{
+  struct thread *cur = thread_current();
+  if (addr == NULL || !is_user_vaddr(addr) || pagedir_get_page(cur->pagedir, addr) == NULL)
+  {
+    /*임의의 잘못된 주소를 참조해서 페이지 폴트 발생시키기. 그냥 exit하는 방법으로도 구현가능*/
+    int *invalid_access = (int *)0xFFFFFFFF;
+    int value = *invalid_access;
+    // exit(-1);
+  }
+}
+
+
 void halt(void) 
 {
   // pintos 종료 함수
@@ -44,6 +98,7 @@ int wait(pid_t pid)
 
 }
  
+/*
 bool create(const char file, unsigned initial_size)
 {
   // 파일 생성 : filesys_create() 함수 사용
