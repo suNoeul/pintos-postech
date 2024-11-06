@@ -5,9 +5,11 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/pagedir.h"
+#include "filesys/filesys.c"
 
 static void syscall_handler(struct intr_frame *);
-void check_address();
+void check_address(const void *addr);
+int alloc_fdt(struct file *f);
 
 void syscall_init(void)
 {
@@ -38,6 +40,7 @@ void exit(int status)
 
 pid_t exec(const char cmd_line)
 {
+
   //
 }
 
@@ -45,22 +48,45 @@ int wait(pid_t pid)
 {
 }
 
-bool create(const char file, unsigned initial_size)
+bool create(const char *file, unsigned initial_size)
 {
   // 파일 생성 : filesys_create() 함수 사용
+  check_address(file);
+  return filesys_create(file, initial_size);
 }
 
-bool remove(const char file)
+bool remove(const char *file)
 {
   // 파일 제거 : filesys_remove()
+  check_address(file);
+  return filesys_remove(file);
 }
 
-int open(const char file)
+int open(const char *file)
 {
+  int fd_idx;
+  struct file *f;
+  check_address(file);
+  f = filesys_open(file);
+  if (f != NULL)
+  {
+    fd_idx = alloc_fdt(f);
+    if (fd_idx != -1)
+      return fd_idx;
+    else
+    {
+      file_close(f);
+      return -1;
+    }
+  }
+  return -1;
 }
 
 int filesize(int fd)
 {
+  if (fd > 1 && fd < MAX_FD)
+    return thread_current()->fd_table[fd]->inode->data.length;
+  return -1;
 }
 
 int read(int fd, void buffer, unsigned size)
@@ -91,4 +117,20 @@ void check_address(const void *addr)
     int *invalid_access = (int *)0xFFFFFFFF;
     int value = *invalid_access;
   }
+}
+
+int alloc_fdt(struct file *f)
+{
+  struct thread *cur = thread_current();
+  int fd_idx;
+  // 빈 슬롯 찾기
+  for (fd_idx = 2; fd_idx < MAX_FD; fd_idx++)
+  { // 0과 1은 보통 표준 입출력용으로 예약
+    if (cur->fd_table[fd_idx] == NULL)
+    {
+      cur->fd_table[fd_idx] = f;
+      return fd_idx;
+    }
+  }
+  return -1;
 }

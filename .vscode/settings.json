@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "vaddr.h": "c"
+        "vaddr.h": "c",
+        "debug.h": "c"
     }
 }
