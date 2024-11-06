@@ -400,6 +400,15 @@ static void init_thread (struct thread *t, const char *name, int priority)
   t->nice = 0;
   t->recent_cpu = 0;
 
+  /* [Project2] */
+  struct thread *parent = thread_current();
+  list_init(&t->child_list);
+  list_push_back(&parent->child_list, &t->child_elem);
+
+  sema_init(&t->wait, 0);
+  sema_init(&t->exit, 0);
+  t->exit_flag = false;
+
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);

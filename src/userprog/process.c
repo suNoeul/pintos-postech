@@ -25,6 +25,21 @@
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
+struct thread *get_child_thread(struct thread *parent, tid_t tid) {
+  struct thread *child;
+  struct list_elem *e;
+  
+  /* parent의 child_list를 순회 */  
+  for (e = list_begin(&parent->child_list); e != list_end(&parent->child_list); e = list_next(e)) {
+    child = list_entry(e, struct thread, child_elem);
+
+    if (child->tid == tid) 
+      return child;
+  }
+
+  return NULL;
+}
+
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -44,12 +59,24 @@ tid_t process_execute (const char *file_name)
   /* Make a copy of PROGRAM_NAME */
   size_t length = strcspn(fn_copy, " ");
   strlcpy(pg_name, fn_copy, length);
-  pg_name[length] = '\0';
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (pg_name, PRI_DEFAULT, start_process, fn_copy);
-  if (tid == TID_ERROR)
+
+  /* Child list update */ 
+  struct thread *parent = thread_current();
+  struct thread * child = get_child_thread(parent, tid);
+
+  if (tid == TID_ERROR || child == NULL) {
     palloc_free_page (fn_copy); 
+    return tid;
+  }
+
+  sema_down(&child->wait);
+
+  if(child->exit_flag) 
+    tid = TID_ERROR;
+
   return tid;
 }
 
@@ -117,6 +144,11 @@ static void start_process (void *file_name_)
   }
   
   success = load (file_name, &if_.eip, &if_.esp); // User Program 로드
+  
+  /* load 성공 여부 저장 및 Parent thread 깨우기 위해 sema_up */
+  struct thread *child = thread_current();
+  child->exit_flag = !success;
+  sema_up(&child->wait);
 
   /* If load failed, quit. */
   if (!success) {
@@ -141,21 +173,39 @@ static void start_process (void *file_name_)
   NOT_REACHED ();
 }
 
-/* Waits for thread TID to die and returns its exit status.  If
-   it was terminated by the kernel (i.e. killed due to an
-   exception), returns -1.  If TID is invalid or if it was not a
-   child of the calling process, or if process_wait() has already
-   been successfully called for the given TID, returns -1
-   immediately, without waiting.
+/* Waits for thread TID to die and returns its exit status.  
+   If it was terminated by the kernel (i.e. killed due to an exception), returns -1.  
+   If TID is invalid or if it was not a child of the calling process, 
+   or if process_wait() has already been successfully called for the given TID, 
+   returns -1 immediately, without waiting.
 
-   This function will be implemented in problem 2-2.  For now, it
-   does nothing. */
+   This function will be implemented in problem 2-2.  For now, it does nothing. */
 int process_wait (tid_t child_tid UNUSED) 
 {
-  while (true) { // 무한 루프: 자식 프로세스 종료까지 대기
-      timer_msleep(100);  // 잠시 대기 (busy waiting 방지)
+  struct thread *parent = thread_current();
+  struct thread *child;
+  struct list_elem *e;
+
+  // 자식 리스트가 비어 있는 경우 바로 -1 반환
+  if (list_empty(&parent->child_list)) 
+    return -1;
+
+  for(e = list_begin(&parent->child_list); 
+      e !=  list_end(&parent->child_list); e = list_next(e)) 
+  {
+    child = list_entry(e, struct thread, child_elem);
+
+    if(child->tid == child_tid){
+      sema_down(&child->wait);              // wait for child to end      
+      int exit_status = child->exit_status; // save results
+      list_remove(&child->child_elem);      // remove element
+      sema_up(&child->exit);                // wake a child up
+
+      return exit_status;
+    }
   }
-  return -1;  // 실제로는 종료 코드 반환 필요
+
+  return -1;  // "TID is invalid" OR "it was not a child of the Calling Process" 
 }
 
 /* Free the current process's resources. */
@@ -180,6 +230,10 @@ void process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+  
+  /* sema control for parent, child */
+  sema_up(&cur->wait);   // wake a Parent up
+  sema_down(&cur->exit); // wait for Parent signal
 }
 
 /* Sets up the CPU for running user code in the current thread.
