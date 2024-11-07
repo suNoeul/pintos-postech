@@ -119,7 +119,7 @@ struct thread
    bool exit_flag;
 
    /* For file management syscall */
-   struct file **fd_table;
+   struct file *fd_table[128];
 #endif
 
    /* Owned by thread.c. */

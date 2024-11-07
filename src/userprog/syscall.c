@@ -17,20 +17,6 @@ struct rw_lock filesys_lock;
 
 static void syscall_handler(struct intr_frame *f);
 
-/* Handler functions according to syscall_number */
-void halt(void);
-void exit(int status);
-tid_t exec(const char *cmd_line);
-int wait(tid_t pid);
-bool create(const char *file, unsigned initial_size);
-bool remove(const char *file);
-int open(const char *file);
-int filesize(int fd);
-int read(int fd, void *buffer, unsigned size);
-int write(int fd, const void *buffer, unsigned size);
-void seek(int fd, unsigned position);
-unsigned tell(int fd);
-void close(int fd);
 
 /* Additional user-defined functions */
 void check_address(const void *addr);
@@ -50,47 +36,51 @@ void syscall_init(void)
 
 static void syscall_handler(struct intr_frame *f)
 {
-  int syscall_number = f->eax;
+  int syscall_number = *(int *)f->esp;
 
   switch(syscall_number){
     case SYS_HALT:
       halt();
       break;
     case SYS_EXIT:
-      exit(f->edi);
+      exit(*(int *)(f->esp+4));
       break;
     case SYS_EXEC:
-      f->eax = exec(f->edi);
+      f->eax = exec(*(const char **)(f->esp+4));
       break;
     case SYS_WAIT:
-      f->eax = wait(f->edi);
+      f->eax = wait(*(pid_t *)(f->esp + 4));
       break;
     case SYS_CREATE:
-      // create();
+      f->eax = create(*(const char **)(f->esp+16), *(unsigned *)(f->esp+20));
       break;
     case SYS_REMOVE:
-      // remove();
+      f->eax = remove(*(const char **)(f->esp+4));
       break;
     case SYS_OPEN:
-      // open();
+      f->eax = open(*(const char **)(f->esp+4));
       break;
     case SYS_FILESIZE:
-      // filesize();
+      f->eax = filesize(*(int *)(f->esp+4));
       break;
     case SYS_READ:
-      // read();
+      f->eax = read(*(int *)(f->esp + 20), 
+                    *(const void **)(f->esp + 24), 
+                    *(unsigned *)(f->esp + 28));
       break;
     case SYS_WRITE:
-      // write();
+      f->eax = write(*(int *)(f->esp + 20), 
+                     *(const void **)(f->esp + 24), 
+                     *(unsigned *)(f->esp + 28));
       break;
     case SYS_SEEK:
-      // seek();
+      seek(*(int *)(f->esp+16), *(unsigned *)(f->esp+20));
       break;
     case SYS_TELL:
-      tell(f->edi);
+      f->eax = tell(*(int *)(f->esp+4));
       break;
     case SYS_CLOSE:
-      close(f->edi);
+      close(*(int *)(f->esp+4));
       break;
     default:
       // exit(-1);
@@ -116,7 +106,7 @@ void exit(int status)
   thread_exit();
 }
 
-tid_t exec(const char *cmd_line) 
+pid_t exec(const char *cmd_line) 
 {
   // Runs the excutable : "cmd_line"
   // return : new process's pid (실패 시 -1 반환)
@@ -124,7 +114,7 @@ tid_t exec(const char *cmd_line)
   return process_execute(cmd_line);
 }
 
-int wait(tid_t pid)
+int wait(pid_t pid)
 {
   // 자식 프로세스 pid를 기다림 && child's exit status 찾기
   // terminate될 때까지 대기 -> pid가 넘긴 exit 코드 반환

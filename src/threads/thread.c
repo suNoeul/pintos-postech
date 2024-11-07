@@ -410,10 +410,8 @@ static void init_thread(struct thread *t, const char *name, int priority)
   t->exit_flag = false;
 
   /* [Project2] Init for file desriptor table*/
-  t->fd_table = palloc_get_page(PAL_USER);
-  // if (t->fd_table == NULL)
-  //   return TID_ERROR;  
-  memset(t->fd_table, 0, PGSIZE);
+  for(int i=0; i < 128; i++)
+    t->fd_table[i] = NULL;
 #endif
 
 

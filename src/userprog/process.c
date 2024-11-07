@@ -162,8 +162,8 @@ static void start_process (void *file_name_)
   if_.edi = argc;                     // argc 개수 저장  
   if_.esi = (uintptr_t)(if_.esp + 4); // argv 주소 저장
     
-  // Stack print
-  hex_dump((uintptr_t)if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
+  /* Stack print */
+  // hex_dump((uintptr_t)if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
 
   /* Start the user process by simulating a return from an interrupt, 
     implemented by intr_exit (in threads/intr-stubs.S).  
