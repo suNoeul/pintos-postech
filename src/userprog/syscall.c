@@ -83,9 +83,7 @@ static void syscall_handler(struct intr_frame *f)
       close(*(int *)(f->esp+4));
       break;
     default:
-      // exit(-1);
-      printf ("system call!\n");
-      thread_exit ();
+      printf ("Not Defined system call!\n");
   }
 }
 
@@ -99,10 +97,11 @@ void exit(int status)
 {
   struct thread *cur = thread_current();
 
-  /* Check status [status == 0 is success state] */
-  printf("%s: exit %d \n", cur->name, status);
+  printf("%s: exit(%d)\n", cur->name, status);
   cur->exit_status = status;
-  // fd 돌면서 NULL 아닌 것들 close 해주기
+  for(int i=2; i < MAX_FD; i++){
+    if(cur->fd_table[i] != NULL) close(i);
+  }
   thread_exit();
 }
 
@@ -145,21 +144,23 @@ bool remove(const char *file)
 int open(const char *file)
 {
   int fd_idx;
-  struct file *f;
   check_address(file);
-  f = filesys_open(file);
-  if (f != NULL)
-  {
+
+  // 전후로 lock 요청?
+  struct file *f = filesys_open(file);
+  // 전후로 lock 요청?
+
+  if (f != NULL) 
+    return -1;
+  else{
     fd_idx = alloc_fdt(f);
     if (fd_idx != -1)
       return fd_idx;
-    else
-    {
+    else {
       file_close(f);
       return -1;
     }
   }
-  return -1;
 }
 
 int filesize(int fd)
@@ -264,11 +265,12 @@ int alloc_fdt(struct file *f)
 {
   struct thread *cur = thread_current();
   int fd_idx;
-  // 빈 슬롯 찾기
+  /* Find idx of empty slot : 0과 1은 보통 표준 입출력용으로 예약 */
   for (fd_idx = 2; fd_idx < MAX_FD; fd_idx++)
-  { // 0과 1은 보통 표준 입출력용으로 예약
+  { 
     if (cur->fd_table[fd_idx] == NULL)
     {
+      // if strcmp(cur->name, f) is equal, file_deny_write(f); 추가해야 하나?
       cur->fd_table[fd_idx] = f;
       return fd_idx;
     }

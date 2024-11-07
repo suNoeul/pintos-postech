@@ -58,7 +58,7 @@ tid_t process_execute (const char *file_name)
 
   /* Make a copy of PROGRAM_NAME */
   size_t length = strcspn(fn_copy, " ");
-  strlcpy(pg_name, fn_copy, length);
+  strlcpy(pg_name, fn_copy, length+1);
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (pg_name, PRI_DEFAULT, start_process, fn_copy);
@@ -106,10 +106,15 @@ void argument_passing(char **argv, int argc, void **esp){
     *esp -= sizeof(char *);
     *(char **)(*esp) = arg_stack_addr[i];
   }
+  
+  // Step4. Push argv, argc
+  *esp -= 4; 
+  *(uint32_t *)(*esp) = *esp+4;
+  *esp -= 4; 
+  *(uint32_t *)(*esp) = argc;
 
-  // Step4. Push fake return address
-  *esp -= 4;
-  *(uint32_t *)(*esp) = 0;
+  // Step5. Push fake return address
+  *esp -= 4; *(uint32_t *)(*esp) = 0;
 }
 
 /* A thread function that loads a user process and starts it running. */
@@ -158,9 +163,7 @@ static void start_process (void *file_name_)
   
   /* User Program 실행 전 Stack Argument Setting */
   argument_passing (argv, argc, &if_.esp);
-  palloc_free_page (file_name);       // copy memory 해제
-  if_.edi = argc;                     // argc 개수 저장  
-  if_.esi = (uintptr_t)(if_.esp + 4); // argv 주소 저장
+  palloc_free_page (file_name);       // copy memory 해제 
     
   /* Stack print */
   // hex_dump((uintptr_t)if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
