@@ -72,7 +72,7 @@ tid_t process_execute (const char *file_name)
     return tid;
   }
 
-  sema_down(&child->wait);
+  sema_down(&child->wait_sys);
 
   if(child->exit_flag) 
     tid = TID_ERROR;
@@ -148,7 +148,7 @@ static void start_process (void *file_name_)
   /* load 성공 여부 저장 및 Parent thread 깨우기 위해 sema_up */
   struct thread *child = thread_current();
   child->exit_flag = !success;
-  sema_up(&child->wait);
+  sema_up(&child->wait_sys);
 
   /* If load failed, quit. */
   if (!success) {
@@ -196,10 +196,10 @@ int process_wait (tid_t child_tid UNUSED)
     child = list_entry(e, struct thread, child_elem);
 
     if(child->tid == child_tid){
-      sema_down(&child->wait);              // wait for child to end      
+      sema_down(&child->wait_sys);              // wait for child to end      
       int exit_status = child->exit_status; // save results
       list_remove(&child->child_elem);      // remove element
-      sema_up(&child->exit);                // wake a child up
+      sema_up(&child->exit_sys);                // wake a child up
 
       return exit_status;
     }
@@ -232,8 +232,8 @@ void process_exit (void)
     }
   
   /* sema control for parent, child */
-  sema_up(&cur->wait);   // wake a Parent up
-  sema_down(&cur->exit); // wait for Parent signal
+  sema_up(&cur->wait_sys);   // wake a Parent up
+  sema_down(&cur->exit_sys); // wait for Parent signal
 }
 
 /* Sets up the CPU for running user code in the current thread.

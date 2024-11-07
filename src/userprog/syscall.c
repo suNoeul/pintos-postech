@@ -4,12 +4,11 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
-#include "userprog/pagedir.h"
-
-#include "devices/shutdown.h"
-#include "userprog/process.h"
-#include "filesys/filesys.c"
 #include "threads/synch.h"
+#include "userprog/pagedir.h"
+#include "userprog/process.h"
+#include "devices/shutdown.h"
+#include "filesys/filesys.c"
 
 #define MAX_FD 128 /*128로 정한 이유는 없음.*/
 

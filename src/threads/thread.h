@@ -110,8 +110,8 @@ struct thread
    uint32_t *pagedir;
 
    /* For process control syscall */     
-   struct semaphore wait;
-   struct semaphore exit;
+   struct semaphore wait_sys;
+   struct semaphore exit_sys;
    struct list child_list;
    struct list_elem child_elem;
 
