@@ -107,10 +107,9 @@ struct thread
 
 #ifdef USERPROG
    /* Owned by userprog/process.c. */
-   uint32_t *pagedir; /* Page directory. */
-   struct file **fd_table;
+   uint32_t *pagedir;
 
-   /* Project2 */
+   /* For process control syscall */     
    struct semaphore wait;
    struct semaphore exit;
    struct list child_list;
@@ -119,6 +118,8 @@ struct thread
    int exit_status;
    bool exit_flag;
 
+   /* For file management syscall */
+   struct file **fd_table;
 #endif
 
    /* Owned by thread.c. */

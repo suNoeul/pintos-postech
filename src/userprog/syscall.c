@@ -11,22 +11,13 @@
 #include "filesys/filesys.c"
 #include "threads/synch.h"
 
-/* Process identifier. */
-typedef int pid_t;
-
 #define MAX_FD 128 /*128로 정한 이유는 없음.*/
 
-static void syscall_handler(struct intr_frame *);
-void check_address(const void *addr);
-int alloc_fdt(struct file *f);
-
-void rw_lock_acquire_read(struct rw_lock lock);
-void rw_lock_release_read(struct rw_lock lock);
-void rw_lock_acquire_write(struct rw_lock lock);
-void rw_lock_release_write(struct rw_lock lock);
-void rw_lock_init(void);
-
+/* Process identifier. */
+typedef int pid_t;
 struct rw_lock filesys_lock;
+
+static void syscall_handler(struct intr_frame *f);
 
 void syscall_init(void)
 {
@@ -34,7 +25,7 @@ void syscall_init(void)
   intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
-static void syscall_handler(struct intr_frame *f UNUSED)
+static void syscall_handler(struct intr_frame *f)
 {
   int syscall_number = f->eax;
 
@@ -52,22 +43,31 @@ static void syscall_handler(struct intr_frame *f UNUSED)
       f->eax = wait(f->edi);
       break;
     case SYS_CREATE:
+      // create();
       break;
     case SYS_REMOVE:
+      // remove();
       break;
     case SYS_OPEN:
+      // open();
       break;
     case SYS_FILESIZE:
+      // filesize();
       break;
     case SYS_READ:
+      // read();
       break;
     case SYS_WRITE:
+      // write();
       break;
     case SYS_SEEK:
+      // seek();
       break;
     case SYS_TELL:
+      tell(f->edi);
       break;
     case SYS_CLOSE:
+      close(f->edi);
       break;
     default:
       // exit(-1);
@@ -76,14 +76,7 @@ static void syscall_handler(struct intr_frame *f UNUSED)
   }
 }
 
-void check_address(const void *addr)
-{
-  if (addr == NULL || 
-      !is_user_vaddr(addr) || 
-      pagedir_get_page(thread_current()->pagedir, addr) == NULL)
-    exit(-1);
-}
-
+/* Handler functions according to syscall_number */
 void halt(void) 
 {
   shutdown_power_off();
@@ -232,7 +225,7 @@ unsigned tell(int fd)
   if (fd > 1 && fd < MAX_FD)
   {
     struct file *f = thread_current()->fd_table[fd];
-    return file_tell(f)
+    return file_tell(f);
   }
   return -1;
 }
@@ -245,14 +238,13 @@ void close(int fd)
   }
 }
 
+/* Additional user-defined functions */
 void check_address(const void *addr)
 {
-  if (addr == NULL || !is_user_vaddr(addr) || pagedir_get_page(thread_current()->pagedir, addr) == NULL)
-  {
-    /*임의의 잘못된 주소를 참조해서 페이지 폴트 발생시키기. 그냥 exit하는 방법으로도 구현가능*/
-    int *invalid_access = (int *)0xFFFFFFFF;
-    int value = *invalid_access;
-  }
+  if (addr == NULL || 
+      !is_user_vaddr(addr) || 
+      pagedir_get_page(thread_current()->pagedir, addr) == NULL)
+    exit(-1);
 }
 
 int alloc_fdt(struct file *f)
@@ -284,7 +276,7 @@ void rw_lock_acquire_read(struct rw_lock lock)
 {
   lock_acquire(&lock.mutex);
   while (lock.writer)
-    cond_wait(lock.readers_ok, lock.mutex);
+    cond_wait(&lock.readers_ok, &lock.mutex);
   lock.readers++;
   lock_release(&lock.mutex);
 }

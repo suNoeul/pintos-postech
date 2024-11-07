@@ -56,7 +56,7 @@ static int load_avg;
 
 static void kernel_thread(thread_func *, void *aux);
 
-static void idle(void *aux UNUSED);
+static void idle(void *idle_started_ UNUSED);
 static struct thread *running_thread(void);
 static struct thread *next_thread_to_run(void);
 static void init_thread(struct thread *, const char *name, int priority);
