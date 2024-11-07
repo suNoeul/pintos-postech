@@ -13,7 +13,6 @@
 #define MAX_FD 128 /*128로 정한 이유는 없음.*/
 
 /* Process identifier. */
-typedef int pid_t;
 struct rw_lock filesys_lock;
 
 static void syscall_handler(struct intr_frame *f);
@@ -92,7 +91,7 @@ void exit(int status)
   thread_exit();
 }
 
-pid_t exec(const char *cmd_line) 
+tid_t exec(const char *cmd_line) 
 {
   // Runs the excutable : "cmd_line"
   // return : new process's pid (실패 시 -1 반환)
@@ -100,7 +99,7 @@ pid_t exec(const char *cmd_line)
   return process_execute(cmd_line);
 }
 
-int wait(pid_t pid)
+int wait(tid_t pid)
 {
   // 자식 프로세스 pid를 기다림 && child's exit status 찾기
   // terminate될 때까지 대기 -> pid가 넘긴 exit 코드 반환
