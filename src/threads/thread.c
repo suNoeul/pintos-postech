@@ -402,9 +402,8 @@ static void init_thread(struct thread *t, const char *name, int priority)
 
 #ifdef USERPROG
   /* [Project2] */
-  struct thread *parent = thread_current();
   list_init(&t->child_list);
-  list_push_back(&parent->child_list, &t->child_elem);
+  list_push_back(&running_thread()->child_list, &t->child_elem);
 
   sema_init(&t->wait_sys, 0);
   sema_init(&t->exit_sys, 0);
@@ -412,8 +411,8 @@ static void init_thread(struct thread *t, const char *name, int priority)
 
   /* [Project2] Init for file desriptor table*/
   t->fd_table = palloc_get_page(PAL_USER);
-  if (t->fd_table == NULL)
-    return TID_ERROR;  
+  // if (t->fd_table == NULL)
+  //   return TID_ERROR;  
   memset(t->fd_table, 0, PGSIZE);
 #endif
 

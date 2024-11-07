@@ -8,7 +8,7 @@
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
 #include "devices/shutdown.h"
-#include "filesys/filesys.c"
+
 
 #define MAX_FD 128 /*128로 정한 이유는 없음.*/
 
@@ -17,9 +17,34 @@ struct rw_lock filesys_lock;
 
 static void syscall_handler(struct intr_frame *f);
 
+/* Handler functions according to syscall_number */
+void halt(void);
+void exit(int status);
+tid_t exec(const char *cmd_line);
+int wait(tid_t pid);
+bool create(const char *file, unsigned initial_size);
+bool remove(const char *file);
+int open(const char *file);
+int filesize(int fd);
+int read(int fd, void *buffer, unsigned size);
+int write(int fd, const void *buffer, unsigned size);
+void seek(int fd, unsigned position);
+unsigned tell(int fd);
+void close(int fd);
+
+/* Additional user-defined functions */
+void check_address(const void *addr);
+int alloc_fdt(struct file *f);
+
+void filesys_lock_init(void);
+void rw_lock_acquire_read(struct rw_lock lock);
+void rw_lock_release_read(struct rw_lock lock);
+void rw_lock_acquire_write(struct rw_lock lock);
+void rw_lock_release_write(struct rw_lock lock);
+
 void syscall_init(void)
 {
-  rw_lock_init();
+  filesys_lock_init();
   intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
