@@ -12,7 +12,7 @@
 #include "filesys/file.h"
 #include "devices/input.h"
 
-#define MAX_FD 126 /*1022로 정한 이유는 없음.*/
+#define MAX_FD 128  /* limit of 128 openfiles per process [Pintos Manual]*/
 
 /* Process identifier. */
 struct lock file_lock;
@@ -179,8 +179,12 @@ int open(const char *file)
 
   /* Return "fd(file_discriptor)" or "-1" */
   int fd_idx = find_idx_of_empty_slot(f);
-  if (fd_idx != -1)
+  if (fd_idx != -1){
+    /* file 이름이 Current Thread와 이름이 같은 경우 : 실행파일이 수정되면 안됨. */
+    if(strcmp(thread_current()->name, file) == 0)
+      file_deny_write(f);
     return fd_idx;
+  }
   else {
     lock_acquire(&file_lock);
     file_close(f);
