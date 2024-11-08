@@ -15,28 +15,23 @@
 #define MAX_FD 126 /*1022로 정한 이유는 없음.*/
 
 /* Process identifier. */
-struct rw_lock filesys_lock;
+struct lock file_lock;
 
 static void syscall_handler(struct intr_frame *f);
 /* Additional user-defined functions */
 void check_address(const void *addr);
 int alloc_fdt(struct file *file_);
 
-void filesys_lock_init(void);
-void rw_lock_acquire_read(struct rw_lock *lock);
-void rw_lock_release_read(struct rw_lock *lock);
-void rw_lock_acquire_write(struct rw_lock *lock);
-void rw_lock_release_write(struct rw_lock *lock);
+
 
 void syscall_init(void)
 {
-  filesys_lock_init();
+  lock_init(&file_lock);
   intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
 static void syscall_handler(struct intr_frame *f)
 {
-  // check_address(f);
   int syscall_number = *(int *)f->esp;
   switch (syscall_number)
   {
@@ -150,12 +145,12 @@ int open(const char *file)
   int fd_idx;
   check_address(file);
 
+  lock_acquire(&file_lock);
   struct file *f = filesys_open(file);
+  lock_release(&file_lock);
 
   if (f == NULL)
-  {
     return -1;
-  }
   else
   {
     fd_idx = alloc_fdt(f);
@@ -171,7 +166,6 @@ int open(const char *file)
 
 int filesize(int fd)
 {
-
   if (fd > 1 && fd < MAX_FD)
     return file_length(thread_current()->fd_table[fd]);
   return -1;
@@ -185,11 +179,13 @@ int read(int fd, void *buffer, unsigned size)
   {
     /*표준 입력*/
     char *char_buffer = (char *)buffer;
+    lock_acquire(&file_lock);
     for (i = 0; i < size; i++)
     {
       char c = input_getc();
       char_buffer[i] = c;
     }
+    lock_release(&file_lock);
     return size;
   }
   else if (fd == 1)
@@ -200,9 +196,9 @@ int read(int fd, void *buffer, unsigned size)
   else if (fd > 1 && fd < MAX_FD)
   {
     struct file *f = thread_current()->fd_table[fd];
-    rw_lock_acquire_read(&filesys_lock);
+    lock_acquire(&file_lock);
     file_read(f, buffer, size);
-    rw_lock_release_read(&filesys_lock);
+    lock_release(&file_lock);
     return size;
   }
   return -1;
@@ -219,7 +215,9 @@ int write(int fd, const void *buffer, unsigned size)
   else if (fd == 1)
   {
     /*표준 출력*/
+    lock_acquire(&file_lock);
     putbuf((const char *)buffer, size);
+    lock_release(&file_lock);
     return size;
   }
   else if (fd > 1 && fd < MAX_FD)
@@ -229,7 +227,11 @@ int write(int fd, const void *buffer, unsigned size)
     {
       return -1;
     }
+    if (get_deny_write(f))
+      file_deny_write(f);
+    lock_acquire(&file_lock);
     file_write(f, buffer, size);
+    lock_release(&file_lock);
     return size;
   }
   return -1;
@@ -240,7 +242,9 @@ void seek(int fd, unsigned position)
   if (fd > 1 && fd < MAX_FD)
   {
     struct file *f = thread_current()->fd_table[fd];
-    file_seek(f, position);
+    if(f != NULL){
+      file_seek(f, position);
+    }
   }
 }
 
@@ -249,7 +253,9 @@ unsigned tell(int fd)
   if (fd > 1 && fd < MAX_FD)
   {
     struct file *f = thread_current()->fd_table[fd];
-    return file_tell(f);
+    if(f != NULL){
+      return file_tell(f);
+    }
   }
   return -1;
 }
@@ -262,8 +268,8 @@ void close(int fd)
     exit(-1);
   else
   {
-    file_ = NULL;
-    // file_close(file_);
+    cur->fd_table[fd] = NULL;
+    file_close(file_);
   }
 }
 
@@ -280,68 +286,17 @@ int alloc_fdt(struct file *file_)
 {
   struct thread *cur = thread_current();
   int fd_idx;
-  for (int i = 2; i < MAX_FD; i++)
-  {
-    if (cur->fd_table[i] == file_)
-    {
-      file_deny_write(file_); // 중복된 파일에 쓰기 금지 설정
-      break;
-    }
-  }
+
   /* Find idx of empty slot : 0과 1은 보통 표준 입출력용으로 예약 */
   for (fd_idx = 2; fd_idx < MAX_FD; fd_idx++)
   {
     if (cur->fd_table[fd_idx] == NULL)
     {
-      // if strcmp(cur->name, f) is equal, file_deny_write(f); 추가해야 하나?
       cur->fd_table[fd_idx] = file_;
+      if (strcmp(cur->name, file_))
+        file_deny_write(file_); // 만약 실행 중인 파일에 대해 open하는 것이라면, 종료될 때까지 write 못하도록 deny_write 활성화
       return fd_idx;
     }
   }
   return -1;
-}
-
-void filesys_lock_init(void)
-{
-  lock_init(&filesys_lock.mutex);
-  cond_init(&filesys_lock.readers_ok);
-  cond_init(&filesys_lock.writer_ok);
-  filesys_lock.readers = 0;
-  filesys_lock.writer = false;
-}
-
-void rw_lock_acquire_read(struct rw_lock *lock)
-{
-  lock_acquire(&lock->mutex);
-  while (lock->writer)
-    cond_wait(&lock->readers_ok, &lock->mutex);
-  lock->readers++;
-  lock_release(&lock->mutex);
-}
-
-void rw_lock_release_read(struct rw_lock *lock)
-{
-  lock_acquire(&lock->mutex);
-  lock->readers--;
-  if (lock->readers == 0)
-    cond_signal(&lock->writer_ok, &lock->mutex);
-  lock_release(&lock->mutex);
-}
-
-void rw_lock_acquire_write(struct rw_lock *lock)
-{
-  lock_acquire(&lock->mutex);
-  while (lock->writer || lock->readers > 0)
-    cond_wait(&lock->writer_ok, &lock->mutex);
-  lock->writer = true;
-  lock_release(&lock->mutex);
-}
-
-void rw_lock_release_write(struct rw_lock *lock)
-{
-  lock_acquire(&lock->mutex);
-  lock->writer = false;
-  cond_broadcast(&lock->readers_ok, &lock->mutex);
-  cond_signal(&lock->writer_ok, &lock->mutex);
-  lock_release(&lock->mutex);
 }

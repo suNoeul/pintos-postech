@@ -4,15 +4,6 @@
 #include "threads/synch.h"
 #include "lib/user/syscall.h"
 
-struct rw_lock
-{
-    struct lock mutex;
-    struct condition readers_ok;
-    struct condition writer_ok;
-    int readers;
-    bool writer;
-};
-
 void syscall_init(void);
 
 /* Handler functions according to syscall_number */
