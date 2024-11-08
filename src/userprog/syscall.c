@@ -36,6 +36,7 @@ void syscall_init(void)
 
 static void syscall_handler(struct intr_frame *f)
 {
+  // check_address(f);
   int syscall_number = *(int *)f->esp;
   switch (syscall_number)
   {
@@ -43,6 +44,7 @@ static void syscall_handler(struct intr_frame *f)
     halt();
     break;
   case SYS_EXIT:
+    check_address((int *)(f->esp + 4));
     exit(*(int *)(f->esp + 4));
     break;
   case SYS_EXEC:
@@ -96,7 +98,6 @@ void halt(void)
 void exit(int status)
 {
   struct thread *cur = thread_current();
-
   printf("%s: exit(%d)\n", cur->name, status);
   cur->exit_status = status;
   for (int i = 2; i < MAX_FD; i++)
