@@ -246,6 +246,12 @@ void process_exit(void)
   }
 
   /*oom*/
+  for (int i = 2; i < 126; i++)
+  {
+    if (cur->fd_table[i] != NULL)
+      file_close(cur->fd_table[i]);
+  }
+
   palloc_free_page(cur->fd_table);
 
   /* sema control for parent, child */

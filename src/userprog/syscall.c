@@ -228,9 +228,7 @@ int write(int fd, const void *buffer, unsigned size)
     {
       return -1;
     }
-    rw_lock_acquire_write(&filesys_lock);
     file_write(f, buffer, size);
-    rw_lock_release_write(&filesys_lock);
     return size;
   }
   return -1;
@@ -264,6 +262,7 @@ void close(int fd)
   else
   {
     file_ = NULL;
+    // file_close(file_);
   }
 }
 
@@ -280,6 +279,14 @@ int alloc_fdt(struct file *file_)
 {
   struct thread *cur = thread_current();
   int fd_idx;
+  for (int i = 2; i < MAX_FD; i++)
+  {
+    if (cur->fd_table[i] == file_)
+    {
+      file_deny_write(file_); // 중복된 파일에 쓰기 금지 설정
+      break;
+    }
+  }
   /* Find idx of empty slot : 0과 1은 보통 표준 입출력용으로 예약 */
   for (fd_idx = 2; fd_idx < MAX_FD; fd_idx++)
   {
