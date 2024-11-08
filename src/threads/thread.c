@@ -193,6 +193,13 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
 
   /* Add to run queue. */
   thread_unblock(t);
+
+  t->fd_table = palloc_get_page(PAL_ZERO);
+  if (t->fd_table == NULL)
+  {
+    return TID_ERROR;
+  }
+
   check_priority_for_yield(); // 우선순위 확인
 
   return tid;
@@ -409,11 +416,7 @@ static void init_thread(struct thread *t, const char *name, int priority)
   sema_init(&t->exit_sys, 0);
   t->exit_flag = false;
 
-  /* [Project2] Init for file desriptor table*/
-  for(int i=0; i < 128; i++)
-    t->fd_table[i] = NULL;
 #endif
-
 
   old_level = intr_disable();
   list_push_back(&all_list, &t->allelem);

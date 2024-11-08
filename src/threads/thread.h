@@ -109,7 +109,7 @@ struct thread
    /* Owned by userprog/process.c. */
    uint32_t *pagedir;
 
-   /* For process control syscall */     
+   /* For process control syscall */
    struct semaphore wait_sys;
    struct semaphore exit_sys;
    struct list child_list;
@@ -119,7 +119,7 @@ struct thread
    bool exit_flag;
 
    /* For file management syscall */
-   struct file *fd_table[128];
+   struct file **fd_table;
 #endif
 
    /* Owned by thread.c. */
