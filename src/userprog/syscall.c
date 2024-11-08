@@ -18,10 +18,11 @@
 struct lock file_lock;
 
 static void syscall_handler(struct intr_frame *f);
+
 /* Additional user-defined functions */
 void check_address(const void *addr);
-int alloc_fdt(struct file *file_);
-
+int find_idx_of_empty_slot(struct file *file);
+struct file *get_file_from_fd(int fd);
 
 
 void syscall_init(void)
@@ -32,55 +33,69 @@ void syscall_init(void)
 
 static void syscall_handler(struct intr_frame *f)
 {
+  /* User stack에서 참조하는 값은 안전한지 확인 */
+  check_address(f->esp);
   int syscall_number = *(int *)f->esp;
-  switch (syscall_number)
-  {
-  case SYS_HALT:
-    halt();
-    break;
-  case SYS_EXIT:
-    check_address((int *)(f->esp + 4));
-    exit(*(int *)(f->esp + 4));
-    break;
-  case SYS_EXEC:
-    f->eax = exec(*(const char **)(f->esp + 4));
-    break;
-  case SYS_WAIT:
-    f->eax = wait(*(pid_t *)(f->esp + 4));
-    break;
-  case SYS_CREATE:
-    f->eax = create(*(const char **)(f->esp + 16), *(unsigned *)(f->esp + 20));
-    break;
-  case SYS_REMOVE:
-    f->eax = remove(*(const char **)(f->esp + 4));
-    break;
-  case SYS_OPEN:
-    f->eax = open(*(const char **)(f->esp + 4));
-    break;
-  case SYS_FILESIZE:
-    f->eax = filesize(*(int *)(f->esp + 4));
-    break;
-  case SYS_READ:
-    f->eax = read(*(int *)(f->esp + 20),
-                  *(const void **)(f->esp + 24),
-                  *(unsigned *)(f->esp + 28));
-    break;
-  case SYS_WRITE:
-    f->eax = write(*(int *)(f->esp + 20),
-                   *(const void **)(f->esp + 24),
-                   *(unsigned *)(f->esp + 28));
-    break;
-  case SYS_SEEK:
-    seek(*(int *)(f->esp + 16), *(unsigned *)(f->esp + 20));
-    break;
-  case SYS_TELL:
-    f->eax = tell(*(int *)(f->esp + 4));
-    break;
-  case SYS_CLOSE:
-    close(*(int *)(f->esp + 4));
-    break;
-  default:
-    printf("Not Defined system call!\n");
+  
+  /* NOTE : Pointer를 참조하는 인자에 대해서 check_address */
+  switch (syscall_number) {
+    case SYS_HALT:
+      halt();
+      break;
+    case SYS_EXIT:
+      check_address(f->esp + 4);
+      exit(*(int *)(f->esp + 4));
+      break;
+    case SYS_EXEC:
+      f->eax = exec(*(const char **)(f->esp + 4));
+      break;
+    case SYS_WAIT:
+      check_address(f->esp + 4);
+      f->eax = wait(*(pid_t *)(f->esp + 4));
+      break;
+    case SYS_CREATE:
+      check_address(f->esp+20);
+      f->eax = create(*(const char **)(f->esp + 16), *(unsigned *)(f->esp + 20));
+      break;
+    case SYS_REMOVE:
+      f->eax = remove(*(const char **)(f->esp + 4));
+      break;
+    case SYS_OPEN:
+      f->eax = open(*(const char **)(f->esp + 4));
+      break;
+    case SYS_FILESIZE:
+      check_address(f->esp + 4);
+      f->eax = filesize(*(int *)(f->esp + 4));
+      break;
+    case SYS_READ:
+      check_address(f->esp + 20);
+      check_address(f->esp + 28);
+      f->eax = read(*(int *)(f->esp + 20),
+                    *(const void **)(f->esp + 24),
+                    *(unsigned *)(f->esp + 28));
+      break;
+    case SYS_WRITE:
+      check_address(f->esp + 20);
+      check_address(f->esp + 28);
+      f->eax = write(*(int *)(f->esp + 20),
+                     *(const void **)(f->esp + 24),
+                     *(unsigned *)(f->esp + 28));
+      break;
+    case SYS_SEEK:
+      check_address(f->esp + 16);
+      check_address(f->esp + 20);
+      seek(*(int *)(f->esp + 16), *(unsigned *)(f->esp + 20));
+      break;
+    case SYS_TELL:
+      check_address(f->esp);
+      f->eax = tell(*(int *)(f->esp + 4));
+      break;
+    case SYS_CLOSE:
+      check_address(f->esp);
+      close(*(int *)(f->esp + 4));
+      break;
+    default:
+      printf("Not Defined system call!\n");
   }
 }
 
@@ -127,149 +142,146 @@ int wait(pid_t pid)
 
 bool create(const char *file, unsigned initial_size)
 {
-  // 파일 생성 : filesys_create() 함수 사용
   check_address(file);
-  return filesys_create(file, initial_size);
+  bool result;
+
+  lock_acquire(&file_lock);
+  result = filesys_create(file, initial_size);
+  lock_release(&file_lock);
+  
+  return result;
 }
 
 bool remove(const char *file)
 {
-  // 파일 제거 : filesys_remove()
   check_address(file);
-  return filesys_remove(file);
+  bool result;
+
+  // Check : 실행 중인 파일에 대해 remove하는 경우, Unix 표준 처리 방식으로 구현해야 함.
+  lock_acquire(&file_lock);
+  result = filesys_remove(file);
+  lock_release(&file_lock);
+
+  return result;
 }
 
 int open(const char *file)
 {
-
-  int fd_idx;
   check_address(file);
 
   lock_acquire(&file_lock);
   struct file *f = filesys_open(file);
   lock_release(&file_lock);
 
+  /* NULL Check */
   if (f == NULL)
     return -1;
-  else
-  {
-    fd_idx = alloc_fdt(f);
-    if (fd_idx != -1)
-      return fd_idx;
-    else
-    {
-      file_close(f);
-      return -1;
-    }
+
+  /* Return "fd(file_discriptor)" or "-1" */
+  int fd_idx = find_idx_of_empty_slot(f);
+  if (fd_idx != -1)
+    return fd_idx;
+  else {
+    lock_acquire(&file_lock);
+    file_close(f);
+    lock_release(&file_lock);
+    return -1;
   }
 }
 
 int filesize(int fd)
 {
-  if (fd > 1 && fd < MAX_FD)
-    return file_length(thread_current()->fd_table[fd]);
-  return -1;
+  struct file* file = get_file_from_fd(fd);
+  if(file != NULL)
+    return file_length(file);
+  else
+    return -1;
 }
 
 int read(int fd, void *buffer, unsigned size)
 {
   check_address(buffer);
-  unsigned int i;
-  if (fd == 0)
-  {
-    /*표준 입력*/
-    char *char_buffer = (char *)buffer;
-    lock_acquire(&file_lock);
-    for (i = 0; i < size; i++)
-    {
-      char c = input_getc();
-      char_buffer[i] = c;
-    }
-    lock_release(&file_lock);
-    return size;
-  }
-  else if (fd == 1)
-  {
-    /*표준 출력*/
+  unsigned int count;
+
+  /* 1(STDOUT_FILENO) */
+  if (fd == 1) 
     return -1;
+  
+  /* 0(STDIN_FILENO) */
+  if (fd == 0) { 
+    char *char_buffer = (char *)buffer;
+    for (count = 0; count < size; count++) {
+      char c = input_getc();
+      char_buffer[count] = c;
+      if(c == '\0') break;
+    }  
+    return count;
   }
-  else if (fd > 1 && fd < MAX_FD)
-  {
-    struct file *f = thread_current()->fd_table[fd];
-    lock_acquire(&file_lock);
-    file_read(f, buffer, size);
-    lock_release(&file_lock);
-    return size;
-  }
+  else { /* Else part */      
+    struct file *file = get_file_from_fd(fd);
+    if(file != NULL){
+      lock_acquire(&file_lock);
+      count = file_read(file, buffer, size);
+      lock_release(&file_lock);
+      return count;
+    }
+  } 
   return -1;
 }
 
 int write(int fd, const void *buffer, unsigned size)
 {
   check_address(buffer);
+  unsigned int count;
+
+  /* 0(STDIN_FILENO) */
   if (fd == 0)
-  {
-    /*표준 입력*/
     return -1;
-  }
-  else if (fd == 1)
-  {
-    /*표준 출력*/
-    lock_acquire(&file_lock);
+
+  /* 1(STDOUT_FILENO) */ 
+  if (fd == 1) {
     putbuf((const char *)buffer, size);
-    lock_release(&file_lock);
     return size;
   }
-  else if (fd > 1 && fd < MAX_FD)
-  {
-    struct file *f = thread_current()->fd_table[fd];
-    if (!f)
-    {
-      return -1;
+  else {
+    struct file *file = get_file_from_fd(fd);
+    if(file != NULL){
+      // if (get_deny_write(f))
+      //   file_deny_write(f);
+      lock_acquire(&file_lock);
+      count = file_write(file, buffer, size);
+      lock_release(&file_lock);
+      return count;
     }
-    if (get_deny_write(f))
-      file_deny_write(f);
-    lock_acquire(&file_lock);
-    file_write(f, buffer, size);
-    lock_release(&file_lock);
-    return size;
   }
   return -1;
 }
 
 void seek(int fd, unsigned position)
 {
-  if (fd > 1 && fd < MAX_FD)
-  {
-    struct file *f = thread_current()->fd_table[fd];
-    if(f != NULL){
-      file_seek(f, position);
-    }
-  }
+  struct file *file = get_file_from_fd(fd);
+  if(file != NULL)
+    file_seek(file, position);
 }
 
 unsigned tell(int fd)
 {
-  if (fd > 1 && fd < MAX_FD)
-  {
-    struct file *f = thread_current()->fd_table[fd];
-    if(f != NULL){
-      return file_tell(f);
-    }
-  }
-  return -1;
+  struct file *file = get_file_from_fd(fd);
+  if(file != NULL)
+    return file_tell(file);
+  else
+    return -1;
 }
 
 void close(int fd)
 {
   struct thread *cur = thread_current();
-  struct file *file_ = cur->fd_table[fd];
-  if (file_ == NULL)
+  struct file *file = get_file_from_fd(fd);
+  if(file == NULL)
     exit(-1);
-  else
-  {
+  else {
     cur->fd_table[fd] = NULL;
-    file_close(file_);
+    file_close(file);
   }
 }
 
@@ -282,21 +294,28 @@ void check_address(const void *addr)
     exit(-1);
 }
 
-int alloc_fdt(struct file *file_)
+int find_idx_of_empty_slot(struct file *file)
 {
   struct thread *cur = thread_current();
   int fd_idx;
 
-  /* Find idx of empty slot : 0과 1은 보통 표준 입출력용으로 예약 */
-  for (fd_idx = 2; fd_idx < MAX_FD; fd_idx++)
-  {
-    if (cur->fd_table[fd_idx] == NULL)
-    {
-      cur->fd_table[fd_idx] = file_;
-      if (strcmp(cur->name, file_))
-        file_deny_write(file_); // 만약 실행 중인 파일에 대해 open하는 것이라면, 종료될 때까지 write 못하도록 deny_write 활성화
+  /* Find idx of empty slot : 0(STDIN_FILENO), 1(STDOUT_FILENO) */
+  for (fd_idx = 2; fd_idx < MAX_FD; fd_idx++) {
+    if (cur->fd_table[fd_idx] == NULL) {
+      cur->fd_table[fd_idx] = file;
       return fd_idx;
     }
   }
+  
   return -1;
+}
+
+struct file *get_file_from_fd(int fd)
+{
+  /* Step1. fd valid check */
+  if (!(fd > 1 && fd < MAX_FD))
+    return NULL;
+
+  /* Step2. return file address */
+  return thread_current()->fd_table[fd];
 }
