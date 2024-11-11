@@ -1,5 +1,6 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
+#include <string.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
@@ -71,7 +72,7 @@ static void syscall_handler(struct intr_frame *f)
       check_address(f->esp + 20);
       check_address(f->esp + 28);
       f->eax = read(*(int *)(f->esp + 20),
-                    *(const void **)(f->esp + 24),
+                    *(void **)(f->esp + 24),
                     *(unsigned *)(f->esp + 28));
       break;
     case SYS_WRITE:

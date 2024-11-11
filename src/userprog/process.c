@@ -18,10 +18,6 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
-// process_wait 함수에서 timer_sleep() 사용하려고 import
-// 기능 완성 된 이후에는 삭제할 것
-#include "devices/timer.h"
-
 static thread_func start_process NO_RETURN;
 static bool load(const char *cmdline, void (**eip)(void), void **esp);
 
@@ -116,7 +112,7 @@ void argument_passing(char **argv, int argc, void **esp)
 
   // Step4. Push argv, argc
   *esp -= 4;
-  *(uint32_t *)(*esp) = *esp + 4;
+  *(uint32_t *)(*esp) = (uint32_t)(*esp + 4);
   *esp -= 4;
   *(uint32_t *)(*esp) = argc;
 
