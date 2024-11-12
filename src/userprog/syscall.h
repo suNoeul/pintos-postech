@@ -4,6 +4,9 @@
 #include "threads/synch.h"
 #include "lib/user/syscall.h"
 
+/* Process identifier. */
+extern struct lock file_lock;
+
 void syscall_init(void);
 
 /* Handler functions according to syscall_number */

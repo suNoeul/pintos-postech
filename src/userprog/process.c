@@ -18,6 +18,8 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
+struct lock file_lock;
+
 static thread_func start_process NO_RETURN;
 static bool load(const char *cmdline, void (**eip)(void), void **esp);
 
@@ -249,6 +251,7 @@ void process_exit(void)
   }
 
   palloc_free_page(cur->fd_table);
+  file_close(cur->excute_file_name);
 
   /* sema control for parent, child */
   sema_up(&cur->wait_sys);   // wake a Parent up
@@ -357,12 +360,16 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
   process_activate();
 
   /* Open executable file. */
+  lock_acquire(&file_lock);
   file = filesys_open(file_name);
   if (file == NULL)
   {
     printf("load: %s: open failed\n", file_name);
     goto done;
   }
+  /* load(excutable file open) 성공 시 실행 파일에 쓰기 방지 설정 */
+  file_deny_write(file);        // 실행 파일에 대한 쓰기 방지
+  t->excute_file_name = file;   // process_exit 때 접근 가능하도록 file 주소 저장
 
   /* Read and verify executable header. */
   if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\1\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 3 || ehdr.e_version != 1 || ehdr.e_phentsize != sizeof(struct Elf32_Phdr) || ehdr.e_phnum > 1024)
@@ -440,7 +447,7 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
 
 done:
   /* We arrive here whether the load is successful or not. */
-  file_close(file);
+  lock_release(&file_lock);
   return success;
 }
 

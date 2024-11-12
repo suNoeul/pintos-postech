@@ -15,9 +15,6 @@
 
 #define MAX_FD 128  /* limit of 128 openfiles per process [Pintos Manual]*/
 
-/* Process identifier. */
-struct lock file_lock;
-
 static void syscall_handler(struct intr_frame *f);
 
 /* Additional user-defined functions */
@@ -55,8 +52,8 @@ static void syscall_handler(struct intr_frame *f)
       f->eax = wait(*(pid_t *)(f->esp + 4));
       break;
     case SYS_CREATE:
-      check_address(f->esp+20);
-      f->eax = create(*(const char **)(f->esp + 16), *(unsigned *)(f->esp + 20));
+      check_address(f->esp+4);
+      f->eax = create(*(const char **)(f->esp + 4), *(unsigned *)(f->esp + 8));
       break;
     case SYS_REMOVE:
       f->eax = remove(*(const char **)(f->esp + 4));
@@ -69,23 +66,23 @@ static void syscall_handler(struct intr_frame *f)
       f->eax = filesize(*(int *)(f->esp + 4));
       break;
     case SYS_READ:
-      check_address(f->esp + 20);
-      check_address(f->esp + 28);
-      f->eax = read(*(int *)(f->esp + 20),
-                    *(void **)(f->esp + 24),
-                    *(unsigned *)(f->esp + 28));
+      check_address(f->esp + 4);
+      check_address(f->esp + 12);
+      f->eax = read(*(int *)(f->esp + 4),
+                    *(void **)(f->esp + 8),
+                    *(unsigned *)(f->esp + 12));
       break;
     case SYS_WRITE:
-      check_address(f->esp + 20);
-      check_address(f->esp + 28);
-      f->eax = write(*(int *)(f->esp + 20),
-                     *(const void **)(f->esp + 24),
-                     *(unsigned *)(f->esp + 28));
+      check_address(f->esp + 4);
+      check_address(f->esp + 12);
+      f->eax = write(*(int *)(f->esp + 4),
+                     *(const void **)(f->esp + 8),
+                     *(unsigned *)(f->esp + 12));
       break;
     case SYS_SEEK:
-      check_address(f->esp + 16);
-      check_address(f->esp + 20);
-      seek(*(int *)(f->esp + 16), *(unsigned *)(f->esp + 20));
+      check_address(f->esp + 4);
+      check_address(f->esp + 8);
+      seek(*(int *)(f->esp + 4), *(unsigned *)(f->esp + 8));
       break;
     case SYS_TELL:
       check_address(f->esp);
@@ -180,12 +177,8 @@ int open(const char *file)
 
   /* Return "fd(file_discriptor)" or "-1" */
   int fd_idx = find_idx_of_empty_slot(f);
-  if (fd_idx != -1){
-    /* file 이름이 Current Thread와 이름이 같은 경우 : 실행파일이 수정되면 안됨. */
-    if(strcmp(thread_current()->name, file) == 0)
-      file_deny_write(f);
+  if (fd_idx != -1)
     return fd_idx;
-  }
   else {
     lock_acquire(&file_lock);
     file_close(f);

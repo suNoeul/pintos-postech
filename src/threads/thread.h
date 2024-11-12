@@ -120,6 +120,7 @@ struct thread
 
    /* For file management syscall */
    struct file **fd_table;
+   struct file *excute_file_name;
 #endif
 
    /* Owned by thread.c. */
