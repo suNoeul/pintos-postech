@@ -202,11 +202,11 @@ int read(int fd, void *buffer, unsigned size)
   unsigned int count;
 
   /* 1(STDOUT_FILENO) */
-  if (fd == 1) 
+  if (fd == STDOUT_FILENO) 
     return -1;
   
   /* 0(STDIN_FILENO) */
-  if (fd == 0) { 
+  if (fd == STDIN_FILENO) { 
     char *char_buffer = (char *)buffer;
     for (count = 0; count < size; count++) {
       char c = input_getc();
@@ -233,19 +233,17 @@ int write(int fd, const void *buffer, unsigned size)
   unsigned int count;
 
   /* 0(STDIN_FILENO) */
-  if (fd == 0)
+  if (fd == STDIN_FILENO)
     return -1;
 
   /* 1(STDOUT_FILENO) */ 
-  if (fd == 1) {
+  if (fd == STDOUT_FILENO) {
     putbuf((const char *)buffer, size);
     return size;
   }
   else {
     struct file *file = get_file_from_fd(fd);
     if(file != NULL){
-      // if (get_deny_write(f))
-      //   file_deny_write(f);
       lock_acquire(&file_lock);
       count = file_write(file, buffer, size);
       lock_release(&file_lock);
