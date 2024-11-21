@@ -92,12 +92,18 @@ static void syscall_handler(struct intr_frame *f)
       check_address(f->esp);
       close(*(int *)(f->esp + 4));
       break;
+    case SYS_MMAP:
+      // mmap();
+      break;
+    case SYS_MUNMAP:
+      // munmap();
+      break;
     default:
       printf("Not Defined system call!\n");
   }
 }
 
-/* Handler functions according to syscall_number */
+/* [Project2] Handler functions according to syscall_number */
 void halt(void)
 {
   shutdown_power_off();
@@ -279,6 +285,17 @@ void close(int fd)
     cur->fd_table[fd] = NULL;
     file_close(file);
   }
+}
+
+/* [Project3] Handler functions according to syscall_number */
+mapid_t mmap(int fd, void *addr)
+{
+
+}
+
+void munmap(mapid_t mapping)
+{
+
 }
 
 /* Additional user-defined functions */

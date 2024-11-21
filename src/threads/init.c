@@ -67,7 +67,7 @@ static void usage (void);
 
 #ifdef FILESYS
 static void locate_block_devices (void);
-static void locate_block_device (enum block_type, const char *name);
+static void locate_block_device (enum block_type role, const char *name);
 #endif
 
 int main (void) NO_RETURN;
