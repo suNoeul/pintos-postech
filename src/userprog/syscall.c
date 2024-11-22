@@ -301,9 +301,7 @@ void munmap(mapid_t mapping)
 /* Additional user-defined functions */
 void check_address(const void *addr)
 {
-  if (addr == NULL ||
-      !is_user_vaddr(addr) ||
-      pagedir_get_page(thread_current()->pagedir, addr) == NULL)
+  if (addr == NULL ||!is_user_vaddr(addr))
     exit(-1);
 }
 

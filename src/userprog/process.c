@@ -231,12 +231,11 @@ void process_exit(void)
   struct thread *cur = thread_current();
   uint32_t *pd;
 
-  /* Destroy the current process's page directory and switch back
-     to the kernel-only page directory. */
-     
-  /*Project  3*/
+  /* Project3 */
   spt_destroy(&thread_current()->spt);
 
+  /* Destroy the current process's page directory and switch back
+     to the kernel-only page directory. */   
   pd = cur->pagedir;
   if (pd != NULL)
   {
@@ -538,16 +537,18 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
     size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
     size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
-    /* Lazy Load Segment 구현 */
-    // 이 시점에서 다음과 같은 정보를 저장할 구조체를 새롭게 할당하는 방법
-    //    - file, ofs, page_read_bytes, page_zero_bytes를 저장 (calloc 사용하는 예시를 보는 중)
-    // 이후 추가적인 초기화 함수 동작
-    // lazy_load_segment 구현해서 함수 포인터를 함께 전달해 초기화 해주는 듯?
+    /* 
+      [Lazy Load Segment 구현]
+        이 시점에서 다음과 같은 정보를 저장할 구조체를 새롭게 할당하는 방법
+          - file, ofs, page_read_bytes, page_zero_bytes를 저장 (calloc 사용하는 예시를 보는 중)
+        이후 추가적인 초기화 함수 동작
+        lazy_load_segment 구현해서 함수 포인터를 함께 전달해 초기화
+    */
 
-    // SPT에 엔트리 추가
-    if (!spt_add_page(&thread_current()->spt, upage, file, ofs,
-                      page_read_bytes, page_zero_bytes, writable))
+    /* Add SPT entry */
+    if (!spt_add_page(&thread_current()->spt, upage, file, ofs, page_read_bytes, page_zero_bytes, writable))
     {
+      spt_cleanup_partial(&thread_current()->spt, upage);
       return false;
     }
 
@@ -562,36 +563,26 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of user virtual memory. */
 static bool setup_stack(void **esp)
 {
-  struct thread *cur = thread_current();
-  uint8_t *kpage;
-  bool success = false;
+  uint8_t *kpage = palloc_get_page(PAL_USER | PAL_ZERO);;
 
-  // 물리 메모리 페이지 할당
-  kpage = palloc_get_page(PAL_USER | PAL_ZERO);
-  if (kpage != NULL)
-  {
-    // 가상 주소와 물리 주소 매핑
-    success = install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true);
-    if (success)
-    {
-      *esp = PHYS_BASE; // 스택 포인터 초기화
-
-      // SPT에 스택 페이지 정보 추가
-      if (!spt_add_page(&cur->spt, ((uint8_t *)PHYS_BASE) - PGSIZE, NULL,
-                        0, 0, PGSIZE, true))
-      {
-        // SPT 추가 실패 시 메모리 해제
-        install_page(((uint8_t *)PHYS_BASE) - PGSIZE, NULL, false); 
-        palloc_free_page(kpage);
-        success = false;
-      }
-    }
-    else
-    {
-      palloc_free_page(kpage); // 매핑 실패 시 메모리 해제
-    }
+  if (!kpage)
+    return false;
+  
+  if(!install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true)){
+    palloc_free_page(kpage);
+    return false;
   }
-  return success;
+
+  // SPT에 스택 페이지 정보 추가
+  struct thread *cur = thread_current();
+  if (!spt_add_page(&cur->spt, ((uint8_t *)PHYS_BASE) - PGSIZE, NULL, 0, 0, PGSIZE, true)){
+    install_page(((uint8_t *)PHYS_BASE) - PGSIZE, NULL, false); // Rollback SPT when fail
+    palloc_free_page(kpage);
+    return false;
+  }
+
+  *esp = PHYS_BASE; 
+  return true;
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel

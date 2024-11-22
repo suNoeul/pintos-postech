@@ -168,7 +168,7 @@ static void page_fault(struct intr_frame *f)
    switch (entry->status) {
       case PAGE_FILE:
          if (!lazy_load_segment(entry))
-            handle_invalid_access(f);
+            exit(-102);
          break;
       //case PAGE_SWAP:
          //if (!swap_in(entry))
@@ -178,25 +178,20 @@ static void page_fault(struct intr_frame *f)
          //break;
       case PAGE_ZERO:
          if (!zero_init_page(entry))
-            handle_invalid_access(f);
+            exit(-101);
          break;
       default:
-         handle_invalid_access(f);
+         exit(-100);
+         /* To implement virtual memory, delete the rest of the function
+         body, and replace it with code that brings in the page to
+         which fault_addr refers. */
+         printf("Page fault at %p: %s error %s page in %s context.\n",
+               fault_addr,
+               not_present ? "not present" : "rights violation",
+               write ? "writing" : "reading",
+               user ? "user" : "kernel");
+         kill(f);
    }
-
-   if (!user || is_kernel_vaddr(fault_addr) || pagedir_get_page(thread_current()->pagedir, fault_addr) == NULL)
-      exit(-1);
-   
-
-   /* To implement virtual memory, delete the rest of the function
-      body, and replace it with code that brings in the page to
-      which fault_addr refers. */
-   printf("Page fault at %p: %s error %s page in %s context.\n",
-          fault_addr,
-          not_present ? "not present" : "rights violation",
-          write ? "writing" : "reading",
-          user ? "user" : "kernel");
-   kill(f);
 }
 
 

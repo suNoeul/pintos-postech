@@ -26,7 +26,7 @@ struct spt_entry *spt_find_page(struct hash *spt, void *upage)
     struct spt_entry entry;
     struct hash_elem *e;
 
-    entry.upage = upage;
+    entry.upage = pg_round_down(upage);
     e = hash_find(spt, &entry.hash_elem);
 
     return e != NULL ? hash_entry(e, struct spt_entry, hash_elem) : NULL;
@@ -42,6 +42,23 @@ void spt_remove_page(struct hash *spt, void *upage)
 
     if (e != NULL) 
         free(hash_entry(e, struct spt_entry, hash_elem));    
+}
+
+void spt_cleanup_partial(struct hash *spt, void *upage_start) 
+{
+    struct hash_iterator it;
+    struct spt_entry *entry;
+    hash_first(&it, spt);
+
+    while (hash_next(&it)) {
+        entry = hash_entry(hash_cur(&it), struct spt_entry, hash_elem);
+
+        // 현재 페이지가 upage_start 이후의 주소인지 확인
+        if (entry->upage >= upage_start) {
+            hash_delete(spt, &entry->hash_elem);
+            free(entry); 
+        }
+    }
 }
 
 bool spt_add_page(struct hash *spt, void *upage, struct file *file,

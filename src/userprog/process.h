@@ -11,7 +11,7 @@ void  argument_passing(char **argv, int argc, void **esp);          // Add new p
 int   process_wait (tid_t);
 void  process_exit (void);
 void  process_activate (void);
-bool zero_init_page(struct spt_entry *entry);
-bool lazy_load_segment(struct spt_entry *entry);
+bool  zero_init_page(struct spt_entry *entry);
+bool  lazy_load_segment(struct spt_entry *entry);
 
 #endif /* userprog/process.h */

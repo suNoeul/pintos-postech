@@ -30,6 +30,7 @@ void spt_destructor(struct hash_elem *e, void *aux UNUSED);
 /* func of manage SPT entry */
 struct spt_entry *spt_find_page(struct hash *spt, void *upage);
 void spt_remove_page(struct hash *spt, void *upage);
+void spt_cleanup_partial(struct hash *spt, void *upage_start) ;
 bool spt_add_page(struct hash *spt, void *upage, struct file *file,
                   off_t ofs, size_t page_read_bytes, size_t page_zero_bytes, bool writable);
 
