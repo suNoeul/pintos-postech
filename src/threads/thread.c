@@ -12,6 +12,7 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "threads/fixedpoint.h" // header for Fixed-Point Real Arithmetic
+#include "vm/page.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -285,7 +286,10 @@ void thread_exit(void)
   /* Remove thread from all threads list, set our status to dying,
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
+
+  
   intr_disable();
+  
   list_remove(&thread_current()->allelem);
   thread_current()->status = THREAD_DYING;
   schedule();
@@ -403,6 +407,8 @@ static void init_thread(struct thread *t, const char *name, int priority)
   t->waiting_lock = NULL;
   list_init(&t->donor_list);
 
+  
+
   /* [Project1] Init for MLFQS */
   t->nice = 0;
   t->recent_cpu = 0;
@@ -411,10 +417,13 @@ static void init_thread(struct thread *t, const char *name, int priority)
   /* [Project2] */
   list_init(&t->child_list);
   list_push_back(&running_thread()->child_list, &t->child_elem);
-
+  
   sema_init(&t->wait_sys, 0);
   sema_init(&t->exit_sys, 0);
   t->exit_flag = false;
+
+  /*Project 3*/
+  spt_init(&t->spt);
 
 #endif
 

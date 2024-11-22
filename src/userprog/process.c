@@ -17,6 +17,8 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "vm/frame.h"
+#include "vm/page.h"
 
 struct lock file_lock;
 
@@ -228,6 +230,10 @@ void process_exit(void)
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
+     
+  /*Project  3*/
+  spt_destroy(&thread_current()->spt);
+
   pd = cur->pagedir;
   if (pd != NULL)
   {
@@ -535,29 +541,16 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
     // 이후 추가적인 초기화 함수 동작
     // lazy_load_segment 구현해서 함수 포인터를 함께 전달해 초기화 해주는 듯?
 
-    /* Get a page of memory. */
-    uint8_t *kpage = palloc_get_page(PAL_USER);
-    if (kpage == NULL)
-      return false;
-
-    /* Load this page. */
-    if (file_read(file, kpage, page_read_bytes) != (int)page_read_bytes)
+    // SPT에 엔트리 추가
+    if (!spt_add_page(&thread_current()->spt, upage, file, ofs,
+                      page_read_bytes, page_zero_bytes, writable))
     {
-      palloc_free_page(kpage);
-      return false;
-    }
-    memset(kpage + page_read_bytes, 0, page_zero_bytes);
-
-    /* Add the page to the process's address space. */
-    if (!install_page(upage, kpage, writable))
-    {
-      palloc_free_page(kpage);
       return false;
     }
 
-    /* Advance. */
     read_bytes -= page_read_bytes;
     zero_bytes -= page_zero_bytes;
+    ofs += page_read_bytes;
     upage += PGSIZE;
   }
   return true;
@@ -566,17 +559,34 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of user virtual memory. */
 static bool setup_stack(void **esp)
 {
+  struct thread *cur = thread_current();
   uint8_t *kpage;
   bool success = false;
 
+  // 물리 메모리 페이지 할당
   kpage = palloc_get_page(PAL_USER | PAL_ZERO);
   if (kpage != NULL)
   {
+    // 가상 주소와 물리 주소 매핑
     success = install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true);
     if (success)
-      *esp = PHYS_BASE;
+    {
+      *esp = PHYS_BASE; // 스택 포인터 초기화
+
+      // SPT에 스택 페이지 정보 추가
+      if (!spt_add_page(&cur->spt, ((uint8_t *)PHYS_BASE) - PGSIZE, NULL,
+                        0, 0, PGSIZE, true))
+      {
+        // SPT 추가 실패 시 메모리 해제
+        install_page(((uint8_t *)PHYS_BASE) - PGSIZE, NULL, false);
+        palloc_free_page(kpage);
+        success = false;
+      }
+    }
     else
-      palloc_free_page(kpage);
+    {
+      palloc_free_page(kpage); // 매핑 실패 시 메모리 해제
+    }
   }
   return success;
 }
@@ -597,4 +607,60 @@ static bool install_page(void *upage, void *kpage, bool writable)
   /* Verify that there's not already a page at that virtual
      address, then map our page there. */
   return (pagedir_get_page(t->pagedir, upage) == NULL && pagedir_set_page(t->pagedir, upage, kpage, writable));
+}
+
+bool lazy_load_segment(struct spt_entry *entry)
+{
+  // Frame Table에서 물리 프레임 할당
+  void *frame = frame_alloc((enum palloc_flags)PAL_USER, entry->upage);
+  if (frame == NULL)
+  {
+    return false; // 메모리 부족
+  }
+
+  // 파일에서 데이터 읽기
+  file_seek(entry->file, entry->ofs);
+  if (file_read(entry->file, frame, entry->page_read_bytes) != (int)entry->page_read_bytes)
+  {
+    frame_free(frame); // 실패 시 프레임 해제
+    return false;
+  }
+
+  // 나머지 부분 0으로 초기화
+  memset(frame + entry->page_read_bytes, 0, entry->page_zero_bytes);
+
+  // 페이지 테이블에 매핑
+  if (!install_page(entry->upage, frame, entry->writable))
+  {
+    frame_free(frame); // 실패 시 프레임 해제
+    return false;
+  }
+
+  // SPT 상태 업데이트
+  entry->status = PAGE_PRESENT; // 페이지가 메모리에 로드됨
+  return true;
+}
+
+bool zero_init_page(struct spt_entry *entry)
+{
+  // 1. Frame Table에서 물리 프레임 할당
+  void *frame = frame_alloc((enum palloc_flags)PAL_USER, entry->upage);
+  if (frame == NULL)
+  {
+    return false; // 메모리 부족
+  }
+
+  // 2. 페이지를 0으로 초기화
+  memset(frame, 0, PGSIZE);
+
+  // 3. 페이지 테이블에 매핑
+  if (!install_page(entry->upage, frame, entry->writable))
+  {
+    frame_free(frame); // 실패 시 프레임 해제
+    return false;
+  }
+
+  // 4. SPT 상태 업데이트
+  entry->status = PAGE_PRESENT; // 페이지가 메모리에 로드됨
+  return true;
 }

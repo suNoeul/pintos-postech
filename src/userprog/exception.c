@@ -5,15 +5,21 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/palloc.h"
 #include "userprog/syscall.h"
 #include "userprog/pagedir.h"
+#include "userprog/process.h"
+#include "vm/frame.h"
+#include "vm/page.h"
+#include "lib/string.h"
+
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
 
 static void kill(struct intr_frame *);
 static void page_fault(struct intr_frame *);
-
+void handle_invalid_access(struct intr_frame *f);
 /* Registers handlers for interrupts that can be caused by user
    programs.
 
@@ -153,10 +159,47 @@ static void page_fault(struct intr_frame *f)
          조건 : NULL이거나, is_kernel_vaddr()이거나 spt에도 없는 경우(is_exist_spt(adrr))
    */
 
+
    if (!user || is_kernel_vaddr(fault_addr) || pagedir_get_page(thread_current()->pagedir, fault_addr) == NULL)
    {
       exit(-1);
    }
+   struct thread *cur = thread_current();
+
+   struct spt_entry *entry = spt_find_page(&cur->spt, fault_addr);
+   if (entry == NULL)
+   {
+      handle_invalid_access(f);
+      return;
+   }
+
+   switch (entry->status)
+   {
+   case PAGE_FILE:
+      if (!lazy_load_segment(entry))
+      {
+         handle_invalid_access(f);
+      }
+      break;
+
+   //case PAGE_SWAP:
+      //if (!swap_in(entry))
+      //{
+         //handle_invalid_access(f);
+      //}
+      //break;
+
+   case PAGE_ZERO:
+      if (!zero_init_page(entry))
+      {
+         handle_invalid_access(f);
+      }
+      break;
+
+   default:
+      handle_invalid_access(f);
+   }
+   
 
    /* To implement virtual memory, delete the rest of the function
       body, and replace it with code that brings in the page to
@@ -167,4 +210,11 @@ static void page_fault(struct intr_frame *f)
           write ? "writing" : "reading",
           user ? "user" : "kernel");
    kill(f);
+}
+
+
+
+void handle_invalid_access(struct intr_frame *f)
+{
+   exit(-1); // 프로세스 종료
 }

@@ -2,20 +2,20 @@
 #define FRAME_H
 
 #include "threads/thread.h"
+#include "threads/palloc.h"
 
-struct frame_entry {
-    void *frame;             /* Start address of Frame */
-    tid_t tid;               /* Frame 소유한 thread ID */
-    bool is_allocated;       /* 할당 여부              */
-    struct list_elem elem;   /* 리스트 관리 요소       */
-
-    uint32_t *pte;  // 필요한가?
-    void *vaddr;    // 필요한가?
+struct frame_table_entry
+{
+    void *frame;           // 물리 프레임 주소
+    void *upage;           // 가상 메모리 주소 (User Page)
+    struct thread *owner;  // 이 프레임을 소유한 스레드
+    bool pinned;           // 핀 여부 (페이지 교체 방지)
+    struct list_elem elem; // Frame Table 리스트 요소
 };
 
 void frame_init(void);
+void *frame_alloc(enum palloc_flags flags, void *upage);
 
-void * frame_alloc (enum palloc_flags flags) ;
 void frame_free(void *frame);
 void set_frame_entry(void* frame);
 void *evict_frame(void);

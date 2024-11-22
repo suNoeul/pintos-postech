@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/synch.h"
+#include "lib/kernel/hash.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -105,6 +106,8 @@ struct thread
    int nice;
    int recent_cpu;
 
+   
+
 #ifdef USERPROG
    /* Owned by userprog/process.c. */
    uint32_t *pagedir;
@@ -121,6 +124,9 @@ struct thread
    /* For file management syscall */
    struct file **fd_table;
    struct file *excute_file_name;
+
+   /*Project 3*/
+   struct hash spt;
 #endif
 
    /* Owned by thread.c. */

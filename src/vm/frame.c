@@ -1,4 +1,4 @@
-#include "frame.h"
+#include "vm/frame.h"
 #include "threads/palloc.h"
 #include "threads/malloc.h"
 #include "threads/thread.h"
@@ -10,7 +10,7 @@ struct lock frame_table_lock;  /* 동기화 락 */
 
 
 /* functionality to manage frame_table */
-static bool add_frame_entry (void *frame);
+static bool add_frame_entry (void *frame, void *upage);
 static void remove_frame_entry (void *frame);
 static struct frame_entry *get_frame_entry (void *frame);
 static struct frame_entry *find_evict_frame (void);
@@ -22,7 +22,9 @@ void frame_init(void){
     lock_init(&frame_table_lock);     /* 락 초기화 */
 }
 
-void * frame_alloc (enum palloc_flags flags) {
+void *frame_alloc(enum palloc_flags flags, void *upage)
+{
+    lock_acquire(&frame_table_lock);
     void *frame = NULL;
 
     frame = palloc_get_page(flags);
@@ -32,13 +34,31 @@ void * frame_alloc (enum palloc_flags flags) {
         // 실패 시, evict frame을 통해 기존 프레임을 교체한 후 프레임 확보
     }
 
-    add_frame(frame);
+    add_frame_entry(frame, upage);
+    lock_release(&frame_table_lock);
     return frame;
 }
 
 void frame_free(void *frame){
     // remove_frame(frame);
     // palloc_free_page(frame);
+
+    lock_acquire(&frame_table_lock);
+
+    struct list_elem *e;
+    for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))
+    {
+        struct frame_table_entry *fte = list_entry(e, struct frame_table_entry, elem);
+        if (fte->frame == frame)
+        {
+            list_remove(e);          // Frame Table에서 제거
+            palloc_free_page(frame); // 물리 메모리 반환
+            free(fte);               // Frame Table Entry 해제
+            break;
+        }
+    }
+
+    lock_release(&frame_table_lock);
 }
 
 void set_frame(void* frame){
@@ -52,25 +72,23 @@ void *evict_frame(void){
     fe = find_evict_frame();
 }
 
-static bool add_frame_entry (void *frame){
-    // struct frame_entry fe = calloc(1, sizeof(*fe));
+static bool add_frame_entry(void *frame, void *upage)
+{
+    struct frame_table_entry *fte = malloc(sizeof(struct frame_table_entry));
+    if (fte == NULL) {
+        lock_release(&frame_table_lock);
+        return NULL;
+    }
+    fte->frame = frame;
+    fte->upage = upage;
+    fte->owner = thread_current();
+    fte->pinned = true; // 기본적으로 핀 처리 (교체 방지)
 
-    // if(fe == NULL)
-    //     return false;
-
-    // fe->frame = frame;
-    // fe->tid = thread_current()->tid;
-
-    // lock acquire
-    // list_push_back(frame_table, &fe->elem);
-    // lock realease    
+    list_push_back(&frame_table, &fte->elem);
 }
 
 static void remove_frame_entry (void *frame){
-    // lock acquire
-    // frame_table을 순회하면서 frame을 찾는다
-    //      - 만약 찾으면 list_remove()하고 free
-    // lock realease  
+    
 }
 
 static struct frame_entry *get_frame_entry (void *frame){
