@@ -104,9 +104,7 @@ struct thread
    struct list_elem donate_elem; /* donation element */
 
    int nice;
-   int recent_cpu;
-
-   
+   int recent_cpu;   
 
 #ifdef USERPROG
    /* Owned by userprog/process.c. */
@@ -124,10 +122,10 @@ struct thread
    /* For file management syscall */
    struct file **fd_table;
    struct file *excute_file_name;
+#endif
 
    /*Project 3*/
    struct hash spt;
-#endif
 
    /* Owned by thread.c. */
    unsigned magic; /* Detects stack overflow. */

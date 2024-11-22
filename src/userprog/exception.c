@@ -158,47 +158,34 @@ static void page_fault(struct intr_frame *f)
       3. Invalid address에 접근한 경우
          조건 : NULL이거나, is_kernel_vaddr()이거나 spt에도 없는 경우(is_exist_spt(adrr))
    */
+ 
+   struct thread *cur = thread_current();
+   struct spt_entry *entry = spt_find_page(&cur->spt, fault_addr);
+   if (entry == NULL) {
+      handle_invalid_access(f);
+   }
 
+   switch (entry->status) {
+      case PAGE_FILE:
+         if (!lazy_load_segment(entry))
+            handle_invalid_access(f);
+         break;
+      //case PAGE_SWAP:
+         //if (!swap_in(entry))
+         //{
+            //handle_invalid_access(f);
+         //}
+         //break;
+      case PAGE_ZERO:
+         if (!zero_init_page(entry))
+            handle_invalid_access(f);
+         break;
+      default:
+         handle_invalid_access(f);
+   }
 
    if (!user || is_kernel_vaddr(fault_addr) || pagedir_get_page(thread_current()->pagedir, fault_addr) == NULL)
-   {
       exit(-1);
-   }
-   struct thread *cur = thread_current();
-
-   struct spt_entry *entry = spt_find_page(&cur->spt, fault_addr);
-   if (entry == NULL)
-   {
-      handle_invalid_access(f);
-      return;
-   }
-
-   switch (entry->status)
-   {
-   case PAGE_FILE:
-      if (!lazy_load_segment(entry))
-      {
-         handle_invalid_access(f);
-      }
-      break;
-
-   //case PAGE_SWAP:
-      //if (!swap_in(entry))
-      //{
-         //handle_invalid_access(f);
-      //}
-      //break;
-
-   case PAGE_ZERO:
-      if (!zero_init_page(entry))
-      {
-         handle_invalid_access(f);
-      }
-      break;
-
-   default:
-      handle_invalid_access(f);
-   }
    
 
    /* To implement virtual memory, delete the rest of the function

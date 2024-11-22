@@ -421,10 +421,6 @@ static void init_thread(struct thread *t, const char *name, int priority)
   sema_init(&t->wait_sys, 0);
   sema_init(&t->exit_sys, 0);
   t->exit_flag = false;
-
-  /*Project 3*/
-  spt_init(&t->spt);
-
 #endif
 
   old_level = intr_disable();

@@ -132,6 +132,9 @@ static void start_process(void *file_name_)
   struct intr_frame if_; // Interrupt Frame
   bool success;          // Program Load 성공 여부
 
+  /* [Project 3] */
+  spt_init(&thread_current()->spt);
+
   /* Initialize interrupt frame and load executable. */
   memset(&if_, 0, sizeof if_);                            // interrupt Frame 0으로 초기화
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG; // Data segment 설정
@@ -578,7 +581,7 @@ static bool setup_stack(void **esp)
                         0, 0, PGSIZE, true))
       {
         // SPT 추가 실패 시 메모리 해제
-        install_page(((uint8_t *)PHYS_BASE) - PGSIZE, NULL, false);
+        install_page(((uint8_t *)PHYS_BASE) - PGSIZE, NULL, false); 
         palloc_free_page(kpage);
         success = false;
       }
@@ -612,7 +615,7 @@ static bool install_page(void *upage, void *kpage, bool writable)
 bool lazy_load_segment(struct spt_entry *entry)
 {
   // Frame Table에서 물리 프레임 할당
-  void *frame = frame_alloc((enum palloc_flags)PAL_USER, entry->upage);
+  void *frame = frame_allocate((enum palloc_flags)PAL_USER, entry->upage);
   if (frame == NULL)
   {
     return false; // 메모리 부족
@@ -622,7 +625,7 @@ bool lazy_load_segment(struct spt_entry *entry)
   file_seek(entry->file, entry->ofs);
   if (file_read(entry->file, frame, entry->page_read_bytes) != (int)entry->page_read_bytes)
   {
-    frame_free(frame); // 실패 시 프레임 해제
+    frame_deallocate(frame); // 실패 시 프레임 해제
     return false;
   }
 
@@ -632,7 +635,7 @@ bool lazy_load_segment(struct spt_entry *entry)
   // 페이지 테이블에 매핑
   if (!install_page(entry->upage, frame, entry->writable))
   {
-    frame_free(frame); // 실패 시 프레임 해제
+    frame_deallocate(frame); // 실패 시 프레임 해제
     return false;
   }
 
@@ -644,7 +647,7 @@ bool lazy_load_segment(struct spt_entry *entry)
 bool zero_init_page(struct spt_entry *entry)
 {
   // 1. Frame Table에서 물리 프레임 할당
-  void *frame = frame_alloc((enum palloc_flags)PAL_USER, entry->upage);
+  void *frame = frame_allocate((enum palloc_flags)PAL_USER, entry->upage);
   if (frame == NULL)
   {
     return false; // 메모리 부족
@@ -656,7 +659,7 @@ bool zero_init_page(struct spt_entry *entry)
   // 3. 페이지 테이블에 매핑
   if (!install_page(entry->upage, frame, entry->writable))
   {
-    frame_free(frame); // 실패 시 프레임 해제
+    frame_deallocate(frame); // 실패 시 프레임 해제
     return false;
   }
 
