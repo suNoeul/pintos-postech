@@ -12,6 +12,8 @@
 
 /* The code in this file is an interface to an ATA (IDE)
    controller.  It attempts to comply to [ATA-3]. */
+/* IDE(Integrated Drive Electronics)란, 디스크와 컴퓨터 간 데이터 전송을 처리하는 표준 인터페이스. 
+   표준화된 ATA(Advanced Technology Attachment) 인터페이스의 초기 버전과 동일한 개념 */
 
 /* ATA command block port addresses. */
 #define reg_data(CHANNEL) ((CHANNEL)->reg_base + 0)     /* Data. */
@@ -61,18 +63,17 @@ struct ata_disk
 
 /* An ATA channel (aka controller).
    Each channel can control up to two disks. */
-struct channel
+struct  channel
   {
     char name[8];               /* Name, e.g. "ide0". */
     uint16_t reg_base;          /* Base I/O port. */
     uint8_t irq;                /* Interrupt in use. */
 
     struct lock lock;           /* Must acquire to access the controller. */
-    bool expecting_interrupt;   /* True if an interrupt is expected, false if
-                                   any interrupt would be spurious. */
+    bool expecting_interrupt;   /* True if an interrupt is expected, false if any interrupt would be spurious. */
     struct semaphore completion_wait;   /* Up'd by interrupt handler. */
 
-    struct ata_disk devices[2];     /* The devices on this channel. */
+    struct ata_disk devices[2]; /* The devices on this channel. */
   };
 
 /* We support the two "legacy" ATA channels found in a standard PC. */
@@ -98,8 +99,7 @@ static void select_device_wait (const struct ata_disk *);
 static void interrupt_handler (struct intr_frame *);
 
 /* Initialize the disk subsystem and detect disks. */
-void
-ide_init (void) 
+void ide_init (void) 
 {
   size_t chan_no;
 
@@ -254,10 +254,8 @@ check_device_type (struct ata_disk *d)
 }
 
 /* Sends an IDENTIFY DEVICE command to disk D and reads the
-   response.  Registers the disk with the block device
-   layer. */
-static void
-identify_ata_device (struct ata_disk *d) 
+   response.  Registers the disk with the block device layer. */
+static void identify_ata_device (struct ata_disk *d) 
 {
   struct channel *c = d->channel;
   char id[BLOCK_SECTOR_SIZE];

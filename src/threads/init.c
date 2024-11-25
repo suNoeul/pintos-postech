@@ -124,7 +124,7 @@ int main (void)
 
 #ifdef FILESYS
   /* Initialize file system. */
-  ide_init ();
+  ide_init ();  
   locate_block_devices ();
   filesys_init (format_filesys);
 #endif
@@ -383,8 +383,7 @@ static void usage (void)
 
 #ifdef FILESYS
 /* Figure out what block devices to cast in the various Pintos roles. */
-static void
-locate_block_devices (void)
+static void locate_block_devices (void)
 {
   locate_block_device (BLOCK_FILESYS, filesys_bdev_name);
   locate_block_device (BLOCK_SCRATCH, scratch_bdev_name);
@@ -397,8 +396,7 @@ locate_block_devices (void)
    block device with the given NAME, if NAME is non-null,
    otherwise the first block device in probe order of type
    ROLE. */
-static void
-locate_block_device (enum block_type role, const char *name)
+static void locate_block_device (enum block_type role, const char *name)
 {
   struct block *block = NULL;
 

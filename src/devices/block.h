@@ -32,8 +32,7 @@ enum block_type
     BLOCK_SWAP,                  /* Swap. */
     BLOCK_ROLE_CNT,
 
-    /* Other kinds of block devices that Pintos may see but does
-       not interact with. */
+    /* Other kinds of block devices that Pintos may see but does not interact with. */
     BLOCK_RAW = BLOCK_ROLE_CNT,  /* "Raw" device with unidentified contents. */
     BLOCK_FOREIGN,               /* Owned by non-Pintos operating system. */
     BLOCK_CNT                    /* Number of Pintos block types. */
@@ -67,7 +66,7 @@ struct block_operations
     void (*write) (void *aux, block_sector_t, const void *buffer);
   };
 
-struct block *block_register (const char *name, enum block_type,
+struct block *block_register (const char *name, enum block_type type,
                               const char *extra_info, block_sector_t size,
                               const struct block_operations *, void *aux);
 
