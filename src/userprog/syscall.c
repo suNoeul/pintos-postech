@@ -41,7 +41,7 @@ static void syscall_handler(struct intr_frame *f)
       halt();
       break;
     case SYS_EXIT:
-      check_address(f->esp + 4);
+      check_address(f->esp + 16);
       exit(*(int *)(f->esp + 4));
       break;
     case SYS_EXEC:
@@ -301,8 +301,11 @@ void munmap(mapid_t mapping)
 /* Additional user-defined functions */
 void check_address(const void *addr)
 {
-  if (addr == NULL ||!is_user_vaddr(addr))
+
+  if (addr == NULL ||!is_user_vaddr(addr) || spt_find_page(&thread_current()->spt ,  addr) == NULL)
+  {
     exit(-1);
+  }
 }
 
 int find_idx_of_empty_slot(struct file *file)

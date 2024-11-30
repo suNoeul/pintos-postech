@@ -20,6 +20,8 @@
 #include "vm/frame.h"
 #include "vm/page.h"
 
+#define MAX_STACK_SIZE (8 * 1024 * 1024)
+
 struct lock file_lock;
 
 static thread_func start_process NO_RETURN;
@@ -546,7 +548,7 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
     */
 
     /* Add SPT entry */
-    if (!spt_add_page(&thread_current()->spt, upage, file, ofs, page_read_bytes, page_zero_bytes, writable))
+    if (!spt_add_page(&thread_current()->spt, upage, file, ofs, page_read_bytes, page_zero_bytes, writable, PAGE_FILE))
     {
       spt_cleanup_partial(&thread_current()->spt, upage);
       return false;
@@ -575,7 +577,7 @@ static bool setup_stack(void **esp)
 
   // SPT에 스택 페이지 정보 추가
   struct thread *cur = thread_current();
-  if (!spt_add_page(&cur->spt, ((uint8_t *)PHYS_BASE) - PGSIZE, NULL, 0, 0, PGSIZE, true)){
+  if (!spt_add_page(&cur->spt, ((uint8_t *)PHYS_BASE) - PGSIZE, NULL, 0, 0, PGSIZE, true, PAGE_PRESENT)){
     install_page(((uint8_t *)PHYS_BASE) - PGSIZE, NULL, false); // Rollback SPT when fail
     palloc_free_page(kpage);
     return false;
@@ -583,6 +585,37 @@ static bool setup_stack(void **esp)
 
   *esp = PHYS_BASE; 
   return true;
+}
+
+void grow_stack(void *fault_addr)
+{
+  // 페이지 경계로 주소 정렬
+  void *page = pg_round_down(fault_addr);
+
+  // 현재 스택 크기 검사
+  struct thread *t = thread_current();
+  if ((uint8_t *)PHYS_BASE - (uint8_t *)page > MAX_STACK_SIZE)
+  {
+    // 스택 최대 크기를 초과하는 경우
+    PANIC("Stack growth exceeds maximum stack size.");
+  }
+  void* frame = frame_allocate(PAL_USER | PAL_ZERO, page);
+
+
+
+  // 페이지 매핑 수행
+  if (!install_page(page, frame, true))
+  {
+    frame_deallocate(frame);
+    PANIC("Failed to grow stack: install_page failed.");
+  }
+
+  // SPT에 스택 페이지 추가
+  if (!spt_add_page(&t->spt, page, NULL, 0, 0, PGSIZE, true, PAGE_PRESENT))
+  {
+    frame_deallocate(frame);
+    PANIC("Failed to add stack page to SPT.");
+  }
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel

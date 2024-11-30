@@ -13,6 +13,7 @@
 #include "vm/page.h"
 #include "lib/string.h"
 
+#define MAX_STACK_SIZE (8 * 1024 * 1024)
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -20,6 +21,7 @@ static long long page_fault_cnt;
 static void kill(struct intr_frame *);
 static void page_fault(struct intr_frame *);
 void handle_invalid_access(struct intr_frame *f);
+bool is_stack_access(void *esp, void *fault_addr);
 /* Registers handlers for interrupts that can be caused by user
    programs.
 
@@ -161,8 +163,18 @@ static void page_fault(struct intr_frame *f)
  
    struct thread *cur = thread_current();
    struct spt_entry *entry = spt_find_page(&cur->spt, fault_addr);
-   if (entry == NULL) {
-      handle_invalid_access(f);
+   if (entry == NULL)
+   {
+      // (a) 스택 확장 여부 확인
+      if (is_stack_access(f->esp, fault_addr))
+      {
+         grow_stack(fault_addr);
+         return;
+      }
+      else
+      {
+         handle_invalid_access(f);
+      }
    }
 
    switch (entry->status) {
@@ -199,4 +211,27 @@ static void page_fault(struct intr_frame *f)
 void handle_invalid_access(struct intr_frame *f)
 {
    exit(-1); // 프로세스 종료
+}
+
+bool is_stack_access(void *esp, void *fault_addr)
+{
+   // 유효한 사용자 주소인지 확인
+   if (!is_user_vaddr(fault_addr))
+   {
+      return false;
+   }
+
+   // fault_addr가 스택 영역 내에 있는지 확인
+   if (fault_addr < PHYS_BASE - MAX_STACK_SIZE || fault_addr >= PHYS_BASE)
+   {
+      return false;
+   }
+
+   // fault_addr가 스택 확장 조건을 만족하는지 확인
+   if (fault_addr >= (uint8_t *)esp - 32)
+   {
+      return true;
+   }
+
+   return false;
 }
