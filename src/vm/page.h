@@ -32,10 +32,10 @@ struct spt_entry *spt_find_page(struct hash *spt, void *upage);
 void spt_remove_page(struct hash *spt, void *upage);
 void spt_cleanup_partial(struct hash *spt, void *upage_start) ;
 bool spt_add_page(struct hash *spt, void *upage, struct file *file,
-                  off_t ofs, size_t page_read_bytes, size_t page_zero_bytes, bool writable);
+                  off_t ofs, size_t page_read_bytes, size_t page_zero_bytes, bool writable, int status);
 
 /* SPT entry hash func */
 unsigned spt_hash_func(const struct hash_elem *e, void *aux);
 bool spt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux);
 
-#endif /* FRAME_H */
+#endif /* PAGE_H */

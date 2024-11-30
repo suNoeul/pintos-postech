@@ -60,9 +60,8 @@ void spt_cleanup_partial(struct hash *spt, void *upage_start)
         }
     }
 }
-
 bool spt_add_page(struct hash *spt, void *upage, struct file *file,
-                  off_t ofs, size_t page_read_bytes, size_t page_zero_bytes, bool writable)
+                  off_t ofs, size_t page_read_bytes, size_t page_zero_bytes, bool writable, int status)
 {
     struct spt_entry *entry = malloc(sizeof(struct spt_entry));
     
@@ -74,8 +73,8 @@ bool spt_add_page(struct hash *spt, void *upage, struct file *file,
     entry->ofs = ofs;
     entry->page_read_bytes = page_read_bytes;
     entry->page_zero_bytes = page_zero_bytes;
+    entry->status = status;
     entry->writable = writable;
-    entry->status = PAGE_FILE; // 페이지가 파일에 저장되어 있음을 나타냄
 
     struct hash_elem *result = hash_insert(spt, &entry->hash_elem);
     return result == NULL; // NULL 반환 시 성공적으로 삽입된 것
