@@ -8,6 +8,7 @@
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
+#include "userprog/syscall.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -19,6 +20,7 @@
 #include "threads/vaddr.h"
 #include "vm/frame.h"
 #include "vm/page.h"
+#include "vm/swap.h"
 
 #define MAX_STACK_SIZE (8 * 1024 * 1024)
 
@@ -26,6 +28,10 @@ struct lock file_lock;
 
 static thread_func start_process NO_RETURN;
 static bool load(const char *cmdline, void (**eip)(void), void **esp);
+static void page_zero(void *kpage);
+static void page_swap(struct spt_entry *entry, void *kpage);
+static void page_file(struct spt_entry *entry, void *kpage);
+
 
 struct thread *get_child_thread(struct thread *parent, tid_t tid)
 {
@@ -136,6 +142,7 @@ static void start_process(void *file_name_)
 
   /* [Project 3] */
   spt_init(&thread_current()->spt);
+  swap_table_init();
 
   /* Initialize interrupt frame and load executable. */
   memset(&if_, 0, sizeof if_);                            // interrupt Frame 0으로 초기화
@@ -565,13 +572,13 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of user virtual memory. */
 static bool setup_stack(void **esp)
 {
-  uint8_t *kpage = palloc_get_page(PAL_USER | PAL_ZERO);;
+  uint8_t *kpage = frame_allocate(PAL_USER | PAL_ZERO, (uint8_t *)PHYS_BASE - PGSIZE);
 
   if (!kpage)
     return false;
   
   if(!install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true)){
-    palloc_free_page(kpage);
+    frame_deallocate(kpage);
     return false;
   }
 
@@ -579,7 +586,7 @@ static bool setup_stack(void **esp)
   struct thread *cur = thread_current();
   if (!spt_add_page(&cur->spt, ((uint8_t *)PHYS_BASE) - PGSIZE, NULL, 0, 0, PGSIZE, true, PAGE_PRESENT)){
     install_page(((uint8_t *)PHYS_BASE) - PGSIZE, NULL, false); // Rollback SPT when fail
-    palloc_free_page(kpage);
+    frame_deallocate(kpage);
     return false;
   }
 
@@ -587,35 +594,11 @@ static bool setup_stack(void **esp)
   return true;
 }
 
-void grow_stack(void *fault_addr)
+struct spt_entry *grow_stack(void *esp, void *fault_addr, struct thread *cur)
 {
-  // 페이지 경계로 주소 정렬
-  void *page = pg_round_down(fault_addr);
-
-  // 현재 스택 크기 검사
-  struct thread *t = thread_current();
-  if ((uint8_t *)PHYS_BASE - (uint8_t *)page > MAX_STACK_SIZE)
-  {
-    // 스택 최대 크기를 초과하는 경우
-    PANIC("Stack growth exceeds maximum stack size.");
-  }
-  void* frame = frame_allocate(PAL_USER | PAL_ZERO, page);
-
-
-
-  // 페이지 매핑 수행
-  if (!install_page(page, frame, true))
-  {
-    frame_deallocate(frame);
-    PANIC("Failed to grow stack: install_page failed.");
-  }
-
-  // SPT에 스택 페이지 추가
-  if (!spt_add_page(&t->spt, page, NULL, 0, 0, PGSIZE, true, PAGE_PRESENT))
-  {
-    frame_deallocate(frame);
-    PANIC("Failed to add stack page to SPT.");
-  }
+  void *upage = pg_round_down(fault_addr);
+  spt_add_page(&cur->spt, upage, NULL, 0, 0, PGSIZE, true, PAGE_ZERO);
+  return spt_find_page(&cur->spt, upage);
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel
@@ -634,38 +617,6 @@ static bool install_page(void *upage, void *kpage, bool writable)
   /* Verify that there's not already a page at that virtual
      address, then map our page there. */
   return (pagedir_get_page(t->pagedir, upage) == NULL && pagedir_set_page(t->pagedir, upage, kpage, writable));
-}
-
-bool lazy_load_segment(struct spt_entry *entry)
-{
-  // Frame Table에서 물리 프레임 할당
-  void *frame = frame_allocate((enum palloc_flags)PAL_USER, entry->upage);
-  if (frame == NULL)
-  {
-    return false; // 메모리 부족
-  }
-
-  // 파일에서 데이터 읽기
-  file_seek(entry->file, entry->ofs);
-  if (file_read(entry->file, frame, entry->page_read_bytes) != (int)entry->page_read_bytes)
-  {
-    frame_deallocate(frame); // 실패 시 프레임 해제
-    return false;
-  }
-
-  // 나머지 부분 0으로 초기화
-  memset(frame + entry->page_read_bytes, 0, entry->page_zero_bytes);
-
-  // 페이지 테이블에 매핑
-  if (!install_page(entry->upage, frame, entry->writable))
-  {
-    frame_deallocate(frame); // 실패 시 프레임 해제
-    return false;
-  }
-
-  // SPT 상태 업데이트
-  entry->status = PAGE_PRESENT; // 페이지가 메모리에 로드됨
-  return true;
 }
 
 bool zero_init_page(struct spt_entry *entry)
@@ -690,4 +641,67 @@ bool zero_init_page(struct spt_entry *entry)
   // 4. SPT 상태 업데이트
   entry->status = PAGE_PRESENT; // 페이지가 메모리에 로드됨
   return true;
+}
+
+void page_load(struct spt_entry *entry, void *kpage)
+{
+  switch (entry->status)
+  {
+  case PAGE_ZERO:
+    page_zero(kpage);
+    break;
+
+  case PAGE_SWAP:
+    page_swap(entry, kpage);
+    break;
+
+  case PAGE_FILE:
+    page_file(entry, kpage);
+    break;
+
+  default:
+    frame_deallocate(kpage);
+    exit(-1);
+  }
+}
+
+static void page_zero(void *kpage)
+{
+  memset(kpage, 0, PGSIZE);
+}
+
+static void page_swap(struct spt_entry *entry, void *kpage)
+{
+  swap_in(entry->swap_index, kpage);
+  entry->swap_index = -1;
+}
+
+static void page_file(struct spt_entry *entry, void *kpage)
+{
+  bool was_holding_lock = lock_held_by_current_thread(&file_lock);
+
+  if (!was_holding_lock)
+    lock_acquire(&file_lock);
+  file_seek(entry->file, entry->ofs);
+  if (file_read(entry->file, kpage, entry->page_read_bytes) != (int)entry->page_read_bytes)
+  {
+    frame_deallocate(kpage);
+    if (!was_holding_lock)
+      lock_release(&file_lock);
+    exit(-1);
+  }
+  memset(kpage + entry->page_read_bytes, 0, entry->page_zero_bytes);
+
+  if (!was_holding_lock)
+    lock_release(&file_lock);
+}
+
+void map_page(struct spt_entry *entry, void *upage, void *kpage, struct thread *cur)
+{
+  if (!pagedir_set_page(cur->pagedir, upage, kpage, entry->writable))
+  {
+    frame_deallocate(kpage);
+    exit(-1);
+  }
+  entry->status = PAGE_PRESENT;
 }

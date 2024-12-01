@@ -1,5 +1,6 @@
 #include "vm/swap.h"
 #include "threads/vaddr.h"
+#include "threads/synch.h"
 #include <bitmap.h>
 #include <debug.h>
 #include <stdio.h>
@@ -8,6 +9,7 @@
 
 /* Swap Table 전역 변수 */
 struct swap_table swap_table;
+static struct lock swap_lock;
 
 /* Swap Table 초기화 함수 */
 void swap_table_init(void)
@@ -30,6 +32,7 @@ void swap_table_init(void)
     /* 모든 슬롯을 비어 있음으로 초기화 */
     // 비트맵의 모든 비트를 false로 설정
     bitmap_set_all(swap_table.used_slots, false);
+    lock_init(&swap_lock);
 }
 
 /* Swap Out 함수: 메모리 페이지를 Swap Disk로 이동 */
@@ -38,7 +41,9 @@ size_t swap_out(const void *frame)
     /* 사용 가능한 Swap Slot 찾기 */
     // 비어 있는 Swap Slot을 검색
     // 검색된 슬롯을 사용 중으로 설정
+    lock_acquire(&swap_lock);
     size_t slot_idx = bitmap_scan_and_flip(swap_table.used_slots, 0, 1, false);
+    lock_release(&swap_lock);
     if (slot_idx == BITMAP_ERROR)
         PANIC("No available swap slots!");
     swap_table.slot_count--;
@@ -69,7 +74,9 @@ void swap_in(size_t swap_index, void *frame)
     }
     /* Swap Slot 비트맵 갱신 */
     // 해당 Swap Slot의 비트를 비어 있음으로 설정
+    lock_acquire(&swap_lock);
     swap_free_slot(swap_index);
+    lock_release(&swap_lock);
 }
 
 /* Swap Slot 해제 함수 */

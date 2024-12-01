@@ -34,7 +34,7 @@ void *frame_allocate(enum palloc_flags flags, void *upage)
         frame_table_add_entry(frame, upage);
     else { // Frame allocation 실패 시, Evict Frame 호출       
         if (!frame_evict()) // Eviction도 실패한 경우 NULL 반환
-            return  NULL;
+            ASSERT(false);
         frame = palloc_get_page(flags);
         frame_table_add_entry(frame, upage);
     }
@@ -66,6 +66,7 @@ bool frame_evict(void) /* Frame 교체 함수 */
 {
     struct frame_table_entry *victim_entry;
     victim_entry = frame_table_find_victim();
+    ASSERT(victim_entry != NULL);
     return swap_out_evicted_page(victim_entry);
 }
 
@@ -82,8 +83,10 @@ static struct frame_table_entry *frame_table_find_victim(void)
     // 첫 번째 순회
     do
     {
+        if(hand == NULL) {
+            hand = list_begin(&frame_table);
+        }
         current_entry = list_entry(hand, struct frame_table_entry, elem);
-
         // pinned 여부를 확인하고, pinned된 경우 건너뜀
         if (current_entry->pinned)
         {
@@ -162,18 +165,9 @@ static struct frame_table_entry *frame_table_find_victim(void)
     } while (hand != start); // 두 바퀴 순회 완료
     hand = start;
     // Dirty victim 반환
-    if (victim != NULL)
-    {
-        
-        lock_release(&frame_lock);
-        return victim;
-    }
     lock_release(&frame_lock);
+    return victim;
     // 두 바퀴 순회에도 적절한 프레임을 찾지 못한 경우는 발생하지 않음
-    PANIC("Enhanced Clock Algorithm failed to find a victim frame.");
-
-   
-    return NULL; // 절대 도달하지 않음
 }
 
     /* Static function definition */
@@ -187,7 +181,7 @@ static struct frame_table_entry *frame_table_find_victim(void)
     fte->frame = frame;
     fte->upage = upage;
     fte->owner = thread_current();
-    fte->pinned = true;  // 기본적으로 핀 처리 (교체 방지) : 추후 swap 구현 후 수정 예정
+    fte->pinned = false;  // 기본적으로 핀 처리 (교체 방지) : 추후 swap 구현 후 수정 예정
 
     lock_acquire(&frame_lock);
     list_push_back(&frame_table, &fte->elem);
@@ -237,24 +231,6 @@ static bool swap_out_evicted_page (struct frame_table_entry *victim_entry)
 
     pagedir_clear_page(owner->pagedir, upage);
     frame_deallocate(frame);
-}
-
-bool swap_load_page(struct spt_entry *spte)
-{
-    ASSERT(spte != NULL);
-    void *upage = spte->upage;
-    void *frame = frame_allocate(PAL_USER | PAL_ZERO, upage);
-    if (frame == NULL)
-    {
-        return false; // 프레임 할당 실패 시 false 반환
-    }
-    swap_in(spte->swap_index, frame);
-    spte->status = PAGE_PRESENT;
-    spte->swap_index = -1;
-    if (!pagedir_set_page(thread_current()->pagedir, spte->upage, frame, spte->writable)) {
-        frame_deallocate(frame);
-        return false;
-    }
     return true;
 }
 

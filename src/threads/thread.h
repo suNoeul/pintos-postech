@@ -126,6 +126,7 @@ struct thread
 
    /*Project 3*/
    struct hash spt;
+   void *esp;
 
    /* Owned by thread.c. */
    unsigned magic; /* Detects stack overflow. */

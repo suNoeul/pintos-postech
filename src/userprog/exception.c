@@ -132,6 +132,8 @@ static void page_fault(struct intr_frame *f)
    bool user;        /* True: access by user, false: access by kernel. */
    void *fault_addr; /* Fault address. */
 
+
+
    /* Obtain faulting address(virtual address that was accessed to cause the fault)
       - 해당 pointer는 code나 data일 수 있음.
       - 해당 주소에 의해 page fault가 발생한 것이 아닐 수도 있음. (that's f->eip). */
@@ -160,50 +162,29 @@ static void page_fault(struct intr_frame *f)
       3. Invalid address에 접근한 경우
          조건 : NULL이거나, is_kernel_vaddr()이거나 spt에도 없는 경우(is_exist_spt(adrr))
    */
- 
    struct thread *cur = thread_current();
+   void *esp = user ? f->esp : cur->esp;
+   void *upage = pg_round_down(fault_addr);
+
+   if (is_kernel_vaddr(fault_addr) || !not_present)
+      exit(-1);
+   
+
    struct spt_entry *entry = spt_find_page(&cur->spt, fault_addr);
    if (entry == NULL)
    {
-      // (a) 스택 확장 여부 확인
-      if (is_stack_access(f->esp, fault_addr))
+      if (is_stack_access(esp, fault_addr))
       {
-         grow_stack(fault_addr);
-         return;
+         entry = grow_stack(esp, fault_addr, cur);
       }
       else
       {
-         handle_invalid_access(f);
+         exit(-1);
       }
    }
-
-   switch (entry->status) {
-      case PAGE_FILE:
-         if (!lazy_load_segment(entry))
-            exit(-102);
-         break;
-      case PAGE_SWAP:
-         if (!swap_load_page(entry))
-         {
-            handle_invalid_access(f);
-         }
-         break;
-      case PAGE_ZERO:
-         if (!zero_init_page(entry))
-            exit(-101);
-         break;
-      default:
-         exit(-1);
-         /* To implement virtual memory, delete the rest of the function
-         body, and replace it with code that brings in the page to
-         which fault_addr refers. */
-         printf("Page fault at %p: %s error %s page in %s context.\n",
-               fault_addr,
-               not_present ? "not present" : "rights violation",
-               write ? "writing" : "reading",
-               user ? "user" : "kernel");
-         kill(f);
-   }
+   void *kpage = frame_allocate(PAL_USER, upage);
+   page_load(entry, kpage);
+   map_page(entry, upage, kpage, cur);
 }
 
 
@@ -222,7 +203,7 @@ bool is_stack_access(void *esp, void *fault_addr)
    }
 
    // fault_addr가 스택 영역 내에 있는지 확인
-   if (fault_addr < PHYS_BASE - MAX_STACK_SIZE || fault_addr >= PHYS_BASE)
+   if (fault_addr <= PHYS_BASE - MAX_STACK_SIZE || fault_addr >= PHYS_BASE)
    {
       return false;
    }
@@ -232,6 +213,5 @@ bool is_stack_access(void *esp, void *fault_addr)
    {
       return true;
    }
-
    return false;
 }

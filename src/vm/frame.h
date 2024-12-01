@@ -21,6 +21,5 @@ void *frame_allocate(enum palloc_flags flags, void *upage);
 void frame_deallocate(void *frame);
 // void frame_update_entry(void* frame);
 bool frame_evict(void);
-bool swap_load_page(struct spt_entry *spte);
 
 #endif /* FRAME_H */

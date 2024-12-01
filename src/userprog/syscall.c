@@ -34,7 +34,8 @@ static void syscall_handler(struct intr_frame *f)
   /* User stack에서 참조하는 값은 안전한지 확인 */
   check_address(f->esp);
   int syscall_number = *(int *)f->esp;
-  
+  thread_current()->esp = f->esp;
+
   /* NOTE : Pointer를 참조하는 인자에 대해서 check_address */
   switch (syscall_number) {
     case SYS_HALT:
@@ -204,7 +205,10 @@ int filesize(int fd)
 
 int read(int fd, void *buffer, unsigned size)
 {
-  check_address(buffer);
+  if (buffer == NULL || !is_user_vaddr(buffer) || !is_user_vaddr(buffer + size - 1))
+  {
+    exit(-1);
+  }
   unsigned int count;
 
   /* 1(STDOUT_FILENO) */
@@ -301,7 +305,6 @@ void munmap(mapid_t mapping)
 /* Additional user-defined functions */
 void check_address(const void *addr)
 {
-
   if (addr == NULL ||!is_user_vaddr(addr) || spt_find_page(&thread_current()->spt ,  addr) == NULL)
   {
     exit(-1);
