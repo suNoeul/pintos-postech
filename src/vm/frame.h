@@ -3,6 +3,7 @@
 
 #include "threads/thread.h"
 #include "threads/palloc.h"
+#include "vm/page.h"
 
 struct frame_table_entry
 {
@@ -13,10 +14,13 @@ struct frame_table_entry
     struct list_elem elem;  // Frame Table 리스트 요소
 };
 
+
+
 void frame_table_init(void);
 void *frame_allocate(enum palloc_flags flags, void *upage);
 void frame_deallocate(void *frame);
 // void frame_update_entry(void* frame);
-void *frame_evict(void);
+bool frame_evict(void);
+bool swap_load_page(struct spt_entry *spte);
 
 #endif /* FRAME_H */

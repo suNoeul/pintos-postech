@@ -18,9 +18,9 @@ struct spt_entry{
     size_t page_zero_bytes;     // 0으로 초기화할 바이트 수
     bool writable;              // 페이지 쓰기 가능 여부
     int status;                 
-    struct hash_elem hash_elem; 
+    struct hash_elem hash_elem;
+    size_t swap_index; //평상시에는 사용안되다가 PAGE_SWAP status에서만 사용됨.
 };
-
 
 /* init & management func */
 void spt_init(struct hash *spt);

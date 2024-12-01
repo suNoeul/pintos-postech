@@ -75,6 +75,7 @@ bool spt_add_page(struct hash *spt, void *upage, struct file *file,
     entry->page_zero_bytes = page_zero_bytes;
     entry->status = status;
     entry->writable = writable;
+    entry->swap_index = 0;
 
     struct hash_elem *result = hash_insert(spt, &entry->hash_elem);
     return result == NULL; // NULL 반환 시 성공적으로 삽입된 것

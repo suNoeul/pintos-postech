@@ -182,18 +182,18 @@ static void page_fault(struct intr_frame *f)
          if (!lazy_load_segment(entry))
             exit(-102);
          break;
-      //case PAGE_SWAP:
-         //if (!swap_in(entry))
-         //{
-            //handle_invalid_access(f);
-         //}
-         //break;
+      case PAGE_SWAP:
+         if (!swap_load_page(entry))
+         {
+            handle_invalid_access(f);
+         }
+         break;
       case PAGE_ZERO:
          if (!zero_init_page(entry))
             exit(-101);
          break;
       default:
-         exit(-100);
+         exit(-1);
          /* To implement virtual memory, delete the rest of the function
          body, and replace it with code that brings in the page to
          which fault_addr refers. */

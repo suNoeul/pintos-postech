@@ -33,7 +33,7 @@ void swap_table_init(void)
 }
 
 /* Swap Out 함수: 메모리 페이지를 Swap Disk로 이동 */
-size_t swap_out(const void *page)
+size_t swap_out(const void *frame)
 {
     /* 사용 가능한 Swap Slot 찾기 */
     // 비어 있는 Swap Slot을 검색
@@ -48,7 +48,7 @@ size_t swap_out(const void *page)
     for (size_t i = 0; i < PGSIZE / BLOCK_SECTOR_SIZE; i++)
     {
         block_write(swap_table.swap_disk, slot_idx * (PGSIZE / BLOCK_SECTOR_SIZE) + i,
-                    (uint8_t *)page + i * BLOCK_SECTOR_SIZE);
+                    (uint8_t *)frame + i * BLOCK_SECTOR_SIZE);
     }
     /* 저장된 Swap Slot의 인덱스 반환 */
     // 성공적으로 저장된 슬롯의 인덱스를 반환
@@ -56,7 +56,7 @@ size_t swap_out(const void *page)
 }
 
 /* Swap In 함수: Swap Disk에서 메모리 페이지로 복구 */
-void swap_in(size_t swap_index, void *page)
+void swap_in(size_t swap_index, void *frame)
 {
     ASSERT(bitmap_test(swap_table.used_slots, swap_index));
     /* Swap Slot 데이터 복구 */
@@ -65,7 +65,7 @@ void swap_in(size_t swap_index, void *page)
     for (size_t i = 0; i < PGSIZE / BLOCK_SECTOR_SIZE; i++)
     {
         block_read(swap_table.swap_disk, swap_index * (PGSIZE / BLOCK_SECTOR_SIZE) + i,
-                   (uint8_t *)page + i * BLOCK_SECTOR_SIZE);
+                   (uint8_t *)frame + i * BLOCK_SECTOR_SIZE);
     }
     /* Swap Slot 비트맵 갱신 */
     // 해당 Swap Slot의 비트를 비어 있음으로 설정
