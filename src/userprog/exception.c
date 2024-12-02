@@ -20,7 +20,6 @@ static long long page_fault_cnt;
 
 static void kill(struct intr_frame *);
 static void page_fault(struct intr_frame *);
-void handle_invalid_access(struct intr_frame *f);
 bool is_stack_access(void *esp, void *fault_addr);
 /* Registers handlers for interrupts that can be caused by user
    programs.
@@ -167,31 +166,19 @@ static void page_fault(struct intr_frame *f)
    void *upage = pg_round_down(fault_addr);
 
    if (is_kernel_vaddr(fault_addr) || !not_present)
-      exit(-1);
-   
+      exit(-1);   
 
    struct spt_entry *entry = spt_find_page(&cur->spt, fault_addr);
    if (entry == NULL)
    {
       if (is_stack_access(esp, fault_addr))
-      {
          entry = grow_stack(esp, fault_addr, cur);
-      }
       else
-      {
          exit(-1);
-      }
    }
    void *kpage = frame_allocate(PAL_USER, upage);
    page_load(entry, kpage);
    map_page(entry, upage, kpage, cur);
-}
-
-
-
-void handle_invalid_access(struct intr_frame *f)
-{
-   exit(-1); // 프로세스 종료
 }
 
 bool is_stack_access(void *esp, void *fault_addr)

@@ -28,10 +28,6 @@ struct lock file_lock;
 
 static thread_func start_process NO_RETURN;
 static bool load(const char *cmdline, void (**eip)(void), void **esp);
-static void page_zero(void *kpage);
-static void page_swap(struct spt_entry *entry, void *kpage);
-static void page_file(struct spt_entry *entry, void *kpage);
-
 
 struct thread *get_child_thread(struct thread *parent, tid_t tid)
 {
@@ -356,6 +352,13 @@ static bool validate_segment(const struct Elf32_Phdr *, struct file *);
 static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
                          uint32_t read_bytes, uint32_t zero_bytes,
                          bool writable);
+static bool install_page(void *upage, void *kpage, bool writable); 
+
+/* For Project 3 */
+static void page_zero(void *kpage);
+static void page_swap(struct spt_entry *entry, void *kpage);
+static void page_file(struct spt_entry *entry, void *kpage);
+
 
 /* Loads an ELF executable from FILE_NAME into the current thread.
    Stores the executable's entry point into *EIP
@@ -468,9 +471,30 @@ done:
   return success;
 }
 
-/* load() helpers. */
+/* Create a minimal stack by mapping a zeroed page at the top of user virtual memory. */
+static bool setup_stack(void **esp)
+{
+  uint8_t *kpage = frame_allocate(PAL_USER | PAL_ZERO, (uint8_t *)PHYS_BASE - PGSIZE);
 
-static bool install_page(void *upage, void *kpage, bool writable);
+  if (!kpage)
+    return false;
+  
+  if(!install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true)){
+    frame_deallocate(kpage);
+    return false;
+  }
+
+  // SPT에 스택 페이지 정보 추가
+  struct thread *cur = thread_current();
+  if (!spt_add_page(&cur->spt, ((uint8_t *)PHYS_BASE) - PGSIZE, NULL, 0, 0, PGSIZE, true, PAGE_PRESENT)){
+    install_page(((uint8_t *)PHYS_BASE) - PGSIZE, NULL, false); // Rollback SPT when fail
+    frame_deallocate(kpage);
+    return false;
+  }
+
+  *esp = PHYS_BASE; 
+  return true;
+}
 
 /* Checks whether PHDR describes a valid, loadable segment in
    FILE and returns true if so, false otherwise. */
@@ -530,8 +554,7 @@ static bool validate_segment(const struct Elf32_Phdr *phdr, struct file *file)
 
    Return true if successful, false if a memory allocation error
    or disk read error occurs. */
-static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
-                         uint32_t read_bytes, uint32_t zero_bytes, bool writable)
+static bool load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, uint32_t zero_bytes, bool writable)
 {
   ASSERT((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT(pg_ofs(upage) == 0);
@@ -569,38 +592,6 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
   return true;
 }
 
-/* Create a minimal stack by mapping a zeroed page at the top of user virtual memory. */
-static bool setup_stack(void **esp)
-{
-  uint8_t *kpage = frame_allocate(PAL_USER | PAL_ZERO, (uint8_t *)PHYS_BASE - PGSIZE);
-
-  if (!kpage)
-    return false;
-  
-  if(!install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true)){
-    frame_deallocate(kpage);
-    return false;
-  }
-
-  // SPT에 스택 페이지 정보 추가
-  struct thread *cur = thread_current();
-  if (!spt_add_page(&cur->spt, ((uint8_t *)PHYS_BASE) - PGSIZE, NULL, 0, 0, PGSIZE, true, PAGE_PRESENT)){
-    install_page(((uint8_t *)PHYS_BASE) - PGSIZE, NULL, false); // Rollback SPT when fail
-    frame_deallocate(kpage);
-    return false;
-  }
-
-  *esp = PHYS_BASE; 
-  return true;
-}
-
-struct spt_entry *grow_stack(void *esp, void *fault_addr, struct thread *cur)
-{
-  void *upage = pg_round_down(fault_addr);
-  spt_add_page(&cur->spt, upage, NULL, 0, 0, PGSIZE, true, PAGE_ZERO);
-  return spt_find_page(&cur->spt, upage);
-}
-
 /* Adds a mapping from user virtual address UPAGE to kernel
    virtual address KPAGE to the page table.
    If WRITABLE is true, the user process may modify the page;
@@ -614,33 +605,16 @@ static bool install_page(void *upage, void *kpage, bool writable)
 {
   struct thread *t = thread_current();
 
-  /* Verify that there's not already a page at that virtual
-     address, then map our page there. */
+  /* Verify that there's not already a page at that virtual address, then map our page there. */
   return (pagedir_get_page(t->pagedir, upage) == NULL && pagedir_set_page(t->pagedir, upage, kpage, writable));
 }
 
-bool zero_init_page(struct spt_entry *entry)
+/* For Project 3 - Virtual Memory */
+struct spt_entry *grow_stack(void *esp, void *fault_addr, struct thread *cur)
 {
-  // 1. Frame Table에서 물리 프레임 할당
-  void *frame = frame_allocate((enum palloc_flags)PAL_USER, entry->upage);
-  if (frame == NULL)
-  {
-    return false; // 메모리 부족
-  }
-
-  // 2. 페이지를 0으로 초기화
-  memset(frame, 0, PGSIZE);
-
-  // 3. 페이지 테이블에 매핑
-  if (!install_page(entry->upage, frame, entry->writable))
-  {
-    frame_deallocate(frame); // 실패 시 프레임 해제
-    return false;
-  }
-
-  // 4. SPT 상태 업데이트
-  entry->status = PAGE_PRESENT; // 페이지가 메모리에 로드됨
-  return true;
+  void *upage = pg_round_down(fault_addr);
+  spt_add_page(&cur->spt, upage, NULL, 0, 0, PGSIZE, true, PAGE_ZERO);
+  return spt_find_page(&cur->spt, upage);
 }
 
 void page_load(struct spt_entry *entry, void *kpage)
@@ -663,6 +637,16 @@ void page_load(struct spt_entry *entry, void *kpage)
     frame_deallocate(kpage);
     exit(-1);
   }
+}
+
+void map_page(struct spt_entry *entry, void *upage, void *kpage, struct thread *cur)
+{
+  if (!pagedir_set_page(cur->pagedir, upage, kpage, entry->writable))
+  {
+    frame_deallocate(kpage);
+    exit(-1);
+  }
+  entry->status = PAGE_PRESENT;
 }
 
 static void page_zero(void *kpage)
@@ -694,14 +678,4 @@ static void page_file(struct spt_entry *entry, void *kpage)
 
   if (!was_holding_lock)
     lock_release(&file_lock);
-}
-
-void map_page(struct spt_entry *entry, void *upage, void *kpage, struct thread *cur)
-{
-  if (!pagedir_set_page(cur->pagedir, upage, kpage, entry->writable))
-  {
-    frame_deallocate(kpage);
-    exit(-1);
-  }
-  entry->status = PAGE_PRESENT;
 }

@@ -19,7 +19,6 @@ struct frame_table_entry
 void frame_table_init(void);
 void *frame_allocate(enum palloc_flags flags, void *upage);
 void frame_deallocate(void *frame);
-// void frame_update_entry(void* frame);
 bool frame_evict(void);
 
 #endif /* FRAME_H */

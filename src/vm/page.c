@@ -60,6 +60,7 @@ void spt_cleanup_partial(struct hash *spt, void *upage_start)
         }
     }
 }
+
 bool spt_add_page(struct hash *spt, void *upage, struct file *file,
                   off_t ofs, size_t page_read_bytes, size_t page_zero_bytes, bool writable, int status)
 {

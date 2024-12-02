@@ -42,7 +42,7 @@ static void syscall_handler(struct intr_frame *f)
       halt();
       break;
     case SYS_EXIT:
-      check_address(f->esp + 16);
+      check_address(f->esp + 4);
       exit(*(int *)(f->esp + 4));
       break;
     case SYS_EXEC:

@@ -125,8 +125,8 @@ struct thread
 #endif
 
    /*Project 3*/
-   struct hash spt;
-   void *esp;
+   struct hash spt;  // S-page table
+   void *esp;        // save Stack pointer
 
    /* Owned by thread.c. */
    unsigned magic; /* Detects stack overflow. */
