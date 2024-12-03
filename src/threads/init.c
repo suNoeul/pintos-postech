@@ -116,6 +116,7 @@ int main (void)
 
   /* init func for Project 3 */
   frame_table_init();
+  swap_table_init();
 
   /* Start thread scheduler and enable interrupts. */
   thread_start ();

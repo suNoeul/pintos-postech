@@ -294,12 +294,76 @@ void close(int fd)
 /* [Project3] Handler functions according to syscall_number */
 mapid_t mmap(int fd, void *addr)
 {
+  /* 주소 NULL, 0x0, 정렬 확인 || fd 0, 1은 매핑 금지 */
+  if (addr == NULL || pg_ofs(addr) != 0 || fd <= 1) 
+    return -1;  
+  
+  /* 파일이 열리지 않는 경우 */
+  lock_acquire(&file_lock);
+  struct file *file = file_reopen(get_file_from_fd(fd));
+  lock_release(&file_lock);
+  if (file == NULL) 
+    return -1;  
+  
+  /* 열린 파일의 길이가 0바이트인 경우 */
+  off_t length = file_length(file);
+  if (length == 0) 
+    return -1;  
 
+  /* User vaddr 범위 확인 */
+  if (!is_user_vaddr(addr) || !is_user_vaddr(addr + length - 1))
+    return -1;
+  
+  /* 연속적인 Page 공간 확인*/
+  struct thread *cur = thread_current();
+  for (int i = 0; i < length; i += PGSIZE) {    
+    if (!pagedir_get_page(cur->pagedir, addr + i) || spt_find_page(&cur->spt, addr + i)) 
+        return -1;     
+  }
+
+  /* mmt_entry 생성 및 초기화 */
+  struct mmt_entry *mmap = malloc(sizeof(struct mmt_entry));
+  if (mmap == NULL) return -1;    
+  mmap->mmap_id = thread_current()->mapid++;  /* 고유 mapid 생성 */
+  mmap->file = file;
+  mmap->upage = addr;
+
+  if (!mmt_add_page(mmap, addr, length, file)) {
+      free(mmap);
+      return -1;
+  }
+
+  return mmap->mmap_id;
 }
 
 void munmap(mapid_t mapping)
 {
+  /* mapping에 해당하는 mmt_entry 찾기 */
+  struct thread *cur = thread_current();
+  struct mmt_entry *mmap = mmt_find_page(cur->mmt, mapping);
+  if (mmap == NULL) 
+    return;
 
+  /* 모든 SPT Mapping page 해제 */
+  lock_acquire(&file_lock);
+  for (int i = 0; i < mmap->page_cnt; i++) {
+    struct spt_entry *spte = spt_find_page(&cur->spt, mmap->upage);
+    if (spte != NULL) {
+      // Dirty 상태인 경우 파일에 기록 후, SPT Remove
+      if (pagedir_is_dirty(cur->pagedir, mmap->upage)) 
+        file_write_at(spte->file, mmap->upage, spte->page_read_bytes, spte->ofs);
+      spt_remove_page(&cur->spt, mmap->upage); 
+    }
+    mmap->upage += PGSIZE; // 다음 페이지로 이동
+  }
+  lock_release(&file_lock);
+
+  /* hash 제거, 메모리 해제 */
+  hash_delete(&cur->mmt, &mmap->hash_elem);
+  lock_acquire(&file_lock);
+  file_close(mmap->file);
+  lock_release(&file_lock);
+  free(mmap);
 }
 
 /* Additional user-defined functions */

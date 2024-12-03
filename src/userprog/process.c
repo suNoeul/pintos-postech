@@ -137,9 +137,10 @@ static void start_process(void *file_name_)
   bool success;          // Program Load 성공 여부
 
   /* [Project 3] */
-  spt_init(&thread_current()->spt);
-  swap_table_init();
-
+  struct thread *cur = thread_current();
+  spt_init(&cur->spt);
+  spt_init(&cur->mmt);
+    
   /* Initialize interrupt frame and load executable. */
   memset(&if_, 0, sizeof if_);                            // interrupt Frame 0으로 초기화
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG; // Data segment 설정
@@ -238,6 +239,7 @@ void process_exit(void)
 
   /* Project3 */
   spt_destroy(&thread_current()->spt);
+  mmt_destroy(&thread_current()->mmt);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */   
@@ -661,14 +663,14 @@ static void page_swap(struct spt_entry *entry, void *kpage)
 }
 
 static void page_file(struct spt_entry *entry, void *kpage)
-{
+{  
   bool was_holding_lock = lock_held_by_current_thread(&file_lock);
 
   if (!was_holding_lock)
     lock_acquire(&file_lock);
+
   file_seek(entry->file, entry->ofs);
-  if (file_read(entry->file, kpage, entry->page_read_bytes) != (int)entry->page_read_bytes)
-  {
+  if (file_read(entry->file, kpage, entry->page_read_bytes) != (int)entry->page_read_bytes)  {
     frame_deallocate(kpage);
     if (!was_holding_lock)
       lock_release(&file_lock);
@@ -678,4 +680,7 @@ static void page_file(struct spt_entry *entry, void *kpage)
 
   if (!was_holding_lock)
     lock_release(&file_lock);
+  
+  // Q1. file lock 동작이 필요한가?
+  // Q2. pagedir_set_page(thread_current()->pagedir, entry->upage, kpage, entry->writable);
 }

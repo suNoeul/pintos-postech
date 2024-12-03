@@ -5,6 +5,7 @@
 #include "userprog/pagedir.h"
 #include "filesys/file.h"
 
+/* for Supplemental Page Table */
 void spt_init(struct hash *spt)
 {
     hash_init(spt, spt_hash_func, spt_less_func, NULL);
@@ -93,4 +94,51 @@ bool spt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *a
     const struct spt_entry *entry_a = hash_entry(a, struct spt_entry, hash_elem);
     const struct spt_entry *entry_b = hash_entry(b, struct spt_entry, hash_elem);
     return entry_a->upage < entry_b->upage;
+}
+
+
+/* for File Memory Mapping Table */
+void mmt_destroy(struct hash *mmt)
+{
+    hash_destroy(mmt, mmt_destructor);
+}
+
+void mmt_destructor(struct hash_elem *e, void *aux UNUSED)
+{
+    struct spt_entry *entry = hash_entry(e, struct mmt_entry, hash_elem);
+    free(entry);
+}
+
+struct mmt_entry *mmt_find_page(struct hash *mmt, mapid_t mapping)
+{
+    struct mmt_entry entry;
+    struct hash_elem *e;
+
+    entry.mmap_id = mapping;
+    e = hash_find(mmt, &entry.hash_elem);
+
+    return e != NULL ? hash_entry(e, struct mmt_entry, hash_elem) : NULL;
+}
+
+bool mmt_add_page(struct mmt_entry *mmap, void *addr, int length, struct file *file)
+{
+    struct thread *cur = thread_current();
+    int ofs = 0, page_cnt = 0;
+
+    for (page_cnt; length > 0; page_cnt++) {
+        size_t read_bytes = length < PGSIZE ? length : PGSIZE;
+        size_t zero_bytes = PGSIZE - read_bytes; 
+
+        if (!spt_add_page(&cur->spt, addr, file, ofs, read_bytes, zero_bytes, true, PAGE_MMAP)) 
+            return -1;
+
+        ofs += PGSIZE;
+        addr += PGSIZE;
+        length -= PGSIZE;        
+    }
+
+    mmap->page_cnt = page_cnt;
+    
+    struct hash_elem *result = hash_insert(&cur->mmt, &mmap->hash_elem);
+    return result == NULL; // NULL 반환 시 성공적으로 삽입된 것
 }

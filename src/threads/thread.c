@@ -407,8 +407,6 @@ static void init_thread(struct thread *t, const char *name, int priority)
   t->waiting_lock = NULL;
   list_init(&t->donor_list);
 
-  
-
   /* [Project1] Init for MLFQS */
   t->nice = 0;
   t->recent_cpu = 0;
@@ -422,6 +420,8 @@ static void init_thread(struct thread *t, const char *name, int priority)
   sema_init(&t->exit_sys, 0);
   t->exit_flag = false;
 #endif
+  /* [Project 3] */
+  t->mapid = 0;
 
   old_level = intr_disable();
   list_push_back(&all_list, &t->allelem);

@@ -126,8 +126,10 @@ struct thread
 
    /*Project 3*/
    struct hash spt;  // S-page table
-   void *esp;        // save Stack pointer
+   struct hash mmt;  // File Memory-mapped table
 
+   void *esp;        // save Stack pointer
+   mapid_t mapid;    // for Allocate mapid
    /* Owned by thread.c. */
    unsigned magic; /* Detects stack overflow. */
 };
