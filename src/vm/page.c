@@ -34,9 +34,20 @@ void spt_destroy(struct hash *spt)
     hash_destroy(spt, spt_destructor);
 }
 
+void mmt_destroy(struct hash *mmt)
+{
+    hash_destroy(mmt, mmt_destructor);
+}
+
 void spt_destructor(struct hash_elem *e, void *aux UNUSED)
 {
     struct spt_entry *entry = hash_entry(e, struct spt_entry, hash_elem);
+    free(entry);
+}
+
+void mmt_destructor(struct hash_elem *e, void *aux UNUSED)
+{
+    struct spt_entry *entry = hash_entry(e, struct mmt_entry, hash_elem);
     free(entry);
 }
 
@@ -136,8 +147,9 @@ bool mmt_add_page(struct hash* mmt, mapid_t id, struct file *file, void *upage)
 
     for (ofs = 0; ofs < size; ofs += PGSIZE)
     {
-        if(spt_find_page(spt, upage))
+        if(spt_find_page(spt, upage)){
             return false;
+        }
     }
     size_t page_read_bytes, page_zero_bytes;
 
@@ -150,4 +162,27 @@ bool mmt_add_page(struct hash* mmt, mapid_t id, struct file *file, void *upage)
     }
     struct hash_elem *result = hash_insert(mmt, &entry->hash_elem);
     return result == NULL; // NULL 반환 시 성공적으로 삽입된 것
+}
+
+struct mmt_entry *mmt_find_by_file_and_addr(struct hash *mmt, struct file *file, void *addr)
+{
+    struct hash_iterator it;
+    struct mmt_entry *entry;
+
+    hash_first(&it, mmt);
+    while (hash_next(&it))
+    {
+        entry = hash_entry(hash_cur(&it), struct mmt_entry, hash_elem);
+
+
+        if (entry->file == file)
+        {
+            if (entry->upage <= addr && addr < entry->upage + file_length(entry->file))
+            {
+                return entry; // 중복 매핑 발견
+            }
+        }
+    }
+
+    return NULL; // 중복 없음
 }

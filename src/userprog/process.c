@@ -236,13 +236,14 @@ void process_exit(void)
   struct thread *cur = thread_current();
   uint32_t *pd;
 
-  
+  for (int i = 0; i < cur->mapid; i++)
+    munmap(i);
 
   /* Project3 */
   spt_destroy(&thread_current()->spt);
 
   /* Destroy the current process's page directory and switch back
-     to the kernel-only page directory. */   
+     to the kernel-only page directory. */
   pd = cur->pagedir;
   if (pd != NULL)
   {

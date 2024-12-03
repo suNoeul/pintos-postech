@@ -406,10 +406,9 @@ static void init_thread(struct thread *t, const char *name, int priority)
   t->origin_priority = priority;
   t->waiting_lock = NULL;
   list_init(&t->donor_list);
+  t->mapid = 0;
 
-  
-
-  /* [Project1] Init for MLFQS */
+    /* [Project1] Init for MLFQS */
   t->nice = 0;
   t->recent_cpu = 0;
 

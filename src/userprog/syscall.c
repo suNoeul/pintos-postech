@@ -296,24 +296,24 @@ mapid_t mmap(int fd, void *addr)
 {
   if(addr == NULL || addr != pg_round_down(addr))
   {
-    exit(-1);
+    return MAP_FAILED;
   }
   struct thread *cur = thread_current();
   struct file *file = get_file_from_fd(fd);
   if (file == NULL)
-    exit(-1);
+    return MAP_FAILED;
   lock_acquire(&file_lock);
   struct file *reopen_file;
   reopen_file = file_reopen(file);
   if (reopen_file == NULL)
   {
     lock_release(&file_lock);
-    exit(-1);
+    return MAP_FAILED;
   }
   mapid_t mapid = cur->mapid++;
   if (!mmt_add_page(&cur->mmt, mapid, reopen_file, addr)){
     lock_release(&file_lock);
-    exit(-1);
+    return MAP_FAILED;
   }
   lock_release(&file_lock);
   return mapid;
@@ -323,10 +323,10 @@ void munmap(mapid_t mapping)
 {
   struct thread *cur = thread_current();
   if (mapping >= cur->mapid)
-    exit(-1);
+    return;
   struct mmt_entry *entry = mmt_find_entry(&cur->mmt, mapping);
   if(entry == NULL)
-    exit(-1);
+    return;
   void *upage = entry->upage;
 
   off_t ofs;
@@ -347,6 +347,7 @@ void munmap(mapid_t mapping)
     upage += PGSIZE;
   }
   hash_delete(&cur->mmt, &entry->hash_elem);
+  free(entry);
   lock_release(&file_lock);
 }
 

@@ -54,4 +54,7 @@ bool mmt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *a
 struct mmt_entry *mmt_find_entry(struct hash *mmt, mapid_t *mmap_id);
 bool mmt_add_page(struct hash *mmt, mapid_t id, struct file *file, void *upage);
 
+void mmt_destroy(struct hash *mmt);
+void mmt_destructor(struct hash_elem *e, void *aux UNUSED);
+
 #endif /* PAGE_H */
