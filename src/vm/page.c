@@ -4,10 +4,29 @@
 #include "threads/vaddr.h"
 #include "userprog/pagedir.h"
 #include "filesys/file.h"
+#include "lib/user/syscall.h"
 
 void spt_init(struct hash *spt)
 {
     hash_init(spt, spt_hash_func, spt_less_func, NULL);
+}
+
+void mmt_init(struct hash *mmt) 
+{
+    hash_init(mmt, mmt_hash_func, mmt_less_func, NULL);
+}
+
+unsigned mmt_hash_func(const struct hash_elem *e, void *aux)
+{
+    const struct mmt_entry *entry = hash_entry(e, struct mmt_entry, hash_elem);
+    return hash_bytes(&entry->mmap_id, sizeof(entry->mmap_id));
+}
+
+bool mmt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux)
+{
+    const struct mmt_entry *entry_a = hash_entry(a, struct mmt_entry, hash_elem);
+    const struct mmt_entry *entry_b = hash_entry(b, struct mmt_entry, hash_elem);
+    return entry_a->mmap_id < entry_b->mmap_id;
 }
 
 void spt_destroy(struct hash *spt)
@@ -93,4 +112,42 @@ bool spt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *a
     const struct spt_entry *entry_a = hash_entry(a, struct spt_entry, hash_elem);
     const struct spt_entry *entry_b = hash_entry(b, struct spt_entry, hash_elem);
     return entry_a->upage < entry_b->upage;
+}
+
+struct mmt_entry *mmt_find_entry(struct hash *mmt, mapid_t *mmap_id)
+{
+    struct mmt_entry entry;
+    struct hash_elem *e;
+    entry.mmap_id = mmap_id;
+    e = hash_find(mmt, &entry.hash_elem);
+
+    return e != NULL ? hash_entry(e, struct mmt_entry, hash_elem) : NULL;
+}
+
+bool mmt_add_page(struct hash* mmt, mapid_t id, struct file *file, void *upage)
+{
+    struct mmt_entry *entry = (struct mmt_entry *)malloc(sizeof *entry);
+    entry->mmap_id = id;
+    entry->file = file;
+    entry->upage = upage;
+    off_t ofs;
+    struct hash *spt = &thread_current()->spt;
+    int size = file_length(file);
+
+    for (ofs = 0; ofs < size; ofs += PGSIZE)
+    {
+        if(spt_find_page(spt, upage))
+            return false;
+    }
+    size_t page_read_bytes, page_zero_bytes;
+
+    for (ofs = 0; ofs < size; ofs += PGSIZE)
+    {
+        page_read_bytes = ofs + PGSIZE < size ? PGSIZE : size - ofs;
+        page_zero_bytes = PGSIZE - page_read_bytes;
+        spt_add_page(spt, upage, file, ofs, page_read_bytes, page_zero_bytes, true, PAGE_FILE);
+        upage += PGSIZE;
+    }
+    struct hash_elem *result = hash_insert(mmt, &entry->hash_elem);
+    return result == NULL; // NULL 반환 시 성공적으로 삽입된 것
 }

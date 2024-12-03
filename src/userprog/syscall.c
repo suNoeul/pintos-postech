@@ -94,10 +94,10 @@ static void syscall_handler(struct intr_frame *f)
       close(*(int *)(f->esp + 4));
       break;
     case SYS_MMAP:
-      // mmap();
+      f->eax = mmap(*(int *)(f->esp + 4), *(void **)(f->esp + 8));
       break;
     case SYS_MUNMAP:
-      // munmap();
+      munmap(*(mapid_t *)(f->esp + 4));
       break;
     default:
       printf("Not Defined system call!\n");
@@ -294,12 +294,60 @@ void close(int fd)
 /* [Project3] Handler functions according to syscall_number */
 mapid_t mmap(int fd, void *addr)
 {
-
+  if(addr == NULL || addr != pg_round_down(addr))
+  {
+    exit(-1);
+  }
+  struct thread *cur = thread_current();
+  struct file *file = get_file_from_fd(fd);
+  if (file == NULL)
+    exit(-1);
+  lock_acquire(&file_lock);
+  struct file *reopen_file;
+  reopen_file = file_reopen(file);
+  if (reopen_file == NULL)
+  {
+    lock_release(&file_lock);
+    exit(-1);
+  }
+  mapid_t mapid = cur->mapid++;
+  if (!mmt_add_page(&cur->mmt, mapid, reopen_file, addr)){
+    lock_release(&file_lock);
+    exit(-1);
+  }
+  lock_release(&file_lock);
+  return mapid;
 }
 
 void munmap(mapid_t mapping)
 {
+  struct thread *cur = thread_current();
+  if (mapping >= cur->mapid)
+    exit(-1);
+  struct mmt_entry *entry = mmt_find_entry(&cur->mmt, mapping);
+  if(entry == NULL)
+    exit(-1);
+  void *upage = entry->upage;
 
+  off_t ofs;
+  struct spt_entry *spte;
+
+  lock_acquire(&file_lock);
+  off_t size = file_length(entry->file);
+  for (ofs = 0; ofs < size; ofs += PGSIZE)
+  {
+    spte = spt_find_page(&cur->spt, upage);
+    //dirty인 경우 WB
+    if (pagedir_is_dirty(cur->pagedir, upage))
+    {
+      void *kpage = pagedir_get_page(cur->pagedir, upage);
+      file_write_at(spte->file, kpage, spte-> page_read_bytes, spte->ofs);
+    }
+    spt_remove_page(&cur->spt, spte->upage);
+    upage += PGSIZE;
+  }
+  hash_delete(&cur->mmt, &entry->hash_elem);
+  lock_release(&file_lock);
 }
 
 /* Additional user-defined functions */

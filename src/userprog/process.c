@@ -138,7 +138,7 @@ static void start_process(void *file_name_)
 
   /* [Project 3] */
   spt_init(&thread_current()->spt);
-  swap_table_init();
+  mmt_init(&thread_current()->mmt);
 
   /* Initialize interrupt frame and load executable. */
   memset(&if_, 0, sizeof if_);                            // interrupt Frame 0으로 초기화
@@ -235,6 +235,8 @@ void process_exit(void)
 {
   struct thread *cur = thread_current();
   uint32_t *pd;
+
+  
 
   /* Project3 */
   spt_destroy(&thread_current()->spt);

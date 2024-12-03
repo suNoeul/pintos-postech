@@ -116,6 +116,7 @@ int main (void)
 
   /* init func for Project 3 */
   frame_table_init();
+  
 
   /* Start thread scheduler and enable interrupts. */
   thread_start ();
@@ -128,6 +129,7 @@ int main (void)
   locate_block_devices ();
   filesys_init (format_filesys);
 #endif
+  swap_table_init();
 
   printf ("Boot complete.\n");
   
