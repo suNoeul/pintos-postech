@@ -94,10 +94,10 @@ static void syscall_handler(struct intr_frame *f)
       close(*(int *)(f->esp + 4));
       break;
     case SYS_MMAP:
-      // mmap();
+      f->eax = mmap(*(int *)(f->esp + 4), *(void **)(f->esp + 8));
       break;
     case SYS_MUNMAP:
-      // munmap();
+      munmap(*(mapid_t *)(f->esp + 4));
       break;
     default:
       printf("Not Defined system call!\n");
@@ -310,9 +310,9 @@ mapid_t mmap(int fd, void *addr)
   if (length == 0) 
     return -1;  
 
-  /* User vaddr 범위 확인 */
-  if (!is_user_vaddr(addr) || !is_user_vaddr(addr + length - 1))
-    return -1;
+  // /* User vaddr 범위 확인 */
+  // if (!is_user_vaddr(addr) || !is_user_vaddr(addr + length - 1))
+  //   return -1;
   
   /* 연속적인 Page 공간 확인*/
   struct thread *cur = thread_current();
@@ -340,7 +340,7 @@ void munmap(mapid_t mapping)
 {
   /* mapping에 해당하는 mmt_entry 찾기 */
   struct thread *cur = thread_current();
-  struct mmt_entry *mmap = mmt_find_page(cur->mmt, mapping);
+  struct mmt_entry *mmap = mmt_find_page(&cur->mmt, mapping);
   if (mmap == NULL) 
     return;
 

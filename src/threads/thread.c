@@ -12,7 +12,6 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "threads/fixedpoint.h" // header for Fixed-Point Real Arithmetic
-#include "vm/page.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif

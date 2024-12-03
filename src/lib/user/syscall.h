@@ -4,6 +4,10 @@
 #include <stdbool.h>
 #include <debug.h>
 
+/* Map region identifier. */
+typedef int mapid_t;
+#define MAP_FAILED ((mapid_t) -1)
+
 /* Process identifier. */
 typedef int pid_t;
 #define PID_ERROR ((pid_t) -1)

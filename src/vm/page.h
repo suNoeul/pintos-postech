@@ -3,10 +3,7 @@
 
 #include "threads/thread.h"
 #include "filesys/file.h" // `off_t`와 파일 관련 정의 포함
-
-/* Map region identifier. */
-typedef int mapid_t;
-#define MAP_FAILED ((mapid_t) -1)
+#include "user/syscall.h"
 
 /* PAGE Status define */
 #define PAGE_FILE 1    // 파일에서 로드해야 하는 페이지
@@ -50,5 +47,10 @@ bool spt_add_page(struct hash *spt, void *upage, struct file *file,
 /* SPT entry hash func */
 unsigned spt_hash_func(const struct hash_elem *e, void *aux);
 bool spt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux);
+
+void mmt_destroy(struct hash *mmt);
+void mmt_destructor(struct hash_elem *e, void *aux UNUSED);
+struct mmt_entry *mmt_find_page(struct hash *mmt, mapid_t mapping);
+bool mmt_add_page(struct mmt_entry *mmap, void *addr, int length, struct file *file);
 
 #endif /* PAGE_H */

@@ -7,6 +7,8 @@
 #include "threads/synch.h"
 #include "lib/kernel/hash.h"
 
+typedef int mapid_t;
+
 /* States in a thread's life cycle. */
 enum thread_status
 {
