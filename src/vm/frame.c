@@ -14,7 +14,6 @@ struct list_elem *hand = NULL; // frame_table 순회를 위한 커서
 /* functionality to manage frame_table */
 static bool frame_table_add_entry (void *frame, void *upage);
 static struct frame_table_entry *frame_table_find_victim (void);
-static struct frame_table_entry *frame_table_get_entry (void *frame);
 static bool swap_out_evicted_page (struct frame_table_entry *victim_entry);
 
 
@@ -182,23 +181,26 @@ static struct frame_table_entry *frame_table_find_victim(void)
     /* Not Reached : 두 바퀴 순회에도 적절한 프레임을 찾지 못한 경우는 발생하지 않음 */
 }
 
-static struct frame_table_entry *frame_table_get_entry (void *frame)
+bool frame_table_find_entry_delete(void *kpage)
 {
     struct frame_table_entry *fte;
     struct list_elem *e;
     bool success = false;
-    
     lock_acquire(&frame_lock);
-    for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))    {
+    for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))
+    {
         fte = list_entry(e, struct frame_table_entry, elem);
-        if (fte->frame == frame) {
+        if (fte->frame == kpage)
+        {
             success = true;
+            list_remove(e);
+            free(fte);
             break;
-        }          
+        }
     }
     lock_release(&frame_lock);
-    
-    return success ? fte : NULL;
+
+    return success;
 }
 
 static bool swap_out_evicted_page (struct frame_table_entry *victim_entry)

@@ -5,6 +5,7 @@
 #include "userprog/pagedir.h"
 #include "filesys/file.h"
 #include "lib/user/syscall.h"
+#include "vm/frame.h"
 
 void spt_init(struct hash *spt)
 {
@@ -42,12 +43,27 @@ void mmt_destroy(struct hash *mmt)
 void spt_destructor(struct hash_elem *e, void *aux UNUSED)
 {
     struct spt_entry *entry = hash_entry(e, struct spt_entry, hash_elem);
+    uint32_t *pagedir = thread_current()->pagedir;
+    if(entry) {
+        if(entry->status == PAGE_PRESENT) {
+            frame_table_find_entry_delete(pagedir_get_page(pagedir, entry->upage));
+        }
+    }
+    frame_table_find_entry_delete(entry->upage);
     free(entry);
 }
 
 void mmt_destructor(struct hash_elem *e, void *aux UNUSED)
 {
     struct spt_entry *entry = hash_entry(e, struct mmt_entry, hash_elem);
+    uint32_t *pagedir = thread_current()->pagedir;
+    if (entry)
+    {
+        if (entry->status == PAGE_PRESENT)
+        {
+            frame_table_find_entry_delete(pagedir_get_page(pagedir, entry->upage));
+        }
+    }
     free(entry);
 }
 
@@ -69,9 +85,22 @@ void spt_remove_page(struct hash *spt, void *upage)
 
     entry.upage = upage;
     e = hash_delete(spt, &entry.hash_elem);
+    
 
-    if (e != NULL) 
-        free(hash_entry(e, struct spt_entry, hash_elem));    
+    if (e != NULL) {
+        struct spt_entry *entry = hash_entry(e, struct spt_entry, hash_elem);
+        uint32_t *pagedir = thread_current()->pagedir;
+        if (entry)
+        {
+            if (entry->status == PAGE_PRESENT)
+            {
+                frame_table_find_entry_delete(pagedir_get_page(pagedir, entry->upage));
+            }
+        }
+        frame_table_find_entry_delete(entry->upage);
+        free(entry);
+    }
+         
 }
 
 void spt_cleanup_partial(struct hash *spt, void *upage_start) 
