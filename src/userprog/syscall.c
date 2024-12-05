@@ -336,7 +336,7 @@ void munmap(mapid_t mapping)
   off_t size = file_length(entry->file);
   for (ofs = 0; ofs < size; ofs += PGSIZE)
   {
-    spte = spt_find_page(&cur->spt, upage);
+    spte = spt_find_entry(&cur->spt, upage);
     //dirty인 경우 WB
     if (pagedir_is_dirty(cur->pagedir, upage))
     {
@@ -354,7 +354,7 @@ void munmap(mapid_t mapping)
 /* Additional user-defined functions */
 void check_address(const void *addr)
 {
-  if (addr == NULL ||!is_user_vaddr(addr) || spt_find_page(&thread_current()->spt ,  addr) == NULL)
+  if (addr == NULL ||!is_user_vaddr(addr) || spt_find_entry(&thread_current()->spt ,  addr) == NULL)
   {
     exit(-1);
   }

@@ -617,7 +617,7 @@ struct spt_entry *grow_stack(void *esp, void *fault_addr, struct thread *cur)
 {
   void *upage = pg_round_down(fault_addr);
   spt_add_page(&cur->spt, upage, NULL, 0, 0, PGSIZE, true, PAGE_ZERO);
-  return spt_find_page(&cur->spt, upage);
+  return spt_find_entry(&cur->spt, upage);
 }
 
 void load_page(struct spt_entry *entry, void *kpage)

@@ -31,7 +31,7 @@ void spt_destructor(struct hash_elem *e, void *aux UNUSED)
     free(entry);
 }
 
-struct spt_entry *spt_find_page(struct hash *spt, void *upage)
+struct spt_entry *spt_find_entry(struct hash *spt, void *upage)
 {
     struct spt_entry entry;
     struct hash_elem *e;
@@ -166,7 +166,7 @@ bool mmt_add_page(struct hash* mmt, mapid_t id, struct file *file, void *upage)
 
     for (ofs = 0; ofs < size; ofs += PGSIZE)
     {
-        if(spt_find_page(spt, upage)){
+        if(spt_find_entry(spt, upage)){
             return false;
         }
     }

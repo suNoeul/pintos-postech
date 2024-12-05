@@ -149,34 +149,36 @@ static void page_fault(struct intr_frame *f)
    write = (f->error_code & PF_W) != 0;
    user = (f->error_code & PF_U) != 0;
 
-   /* Page Fault가 발생하는 3가지 Case 
-      1. Process가 요청한 Virtual Memory Page가 물리 메모리에 적재 안된 경우
-         [Demanding paging]
-            a. Lazy Loading
-            b. Swap out
-            c. stack overflow
-               - static void vm_stack_growth(void *addr)
-      2. Write 권한 없는 페이지에 write 시도한 경우 (Writing r/o)
-         (!not_present인 경우) : 잘못된 접근
-      3. Invalid address에 접근한 경우
-         조건 : NULL이거나, is_kernel_vaddr()이거나 spt에도 없는 경우(is_exist_spt(adrr))
+   /* [Page Fault Handling Case]
+         1. Demanding paging
+            => Process가 요청한 Virtual Memory Page가 물리 메모리에 적재 안된 경우 
+               a. Lazy Loading (Excutable file, Swap file, etc.)
+               b. stack Growth
+         2. Writing in Read-only File
+            => !not_present 
+         3. Invalid address
+            => NULL || is_kernel_vaddr() || {Entry is not in S-PageTable}
    */
    struct thread *cur = thread_current();
    void *esp = user ? f->esp : cur->esp;
    void *upage = pg_round_down(fault_addr);
 
+   /* Invalid Access : kernel or read-only */
    if (is_kernel_vaddr(fault_addr) || !not_present)
       exit(-1);   
 
-   struct spt_entry *entry = spt_find_page(&cur->spt, fault_addr);
+   /* Lazy Loading Check (exct_File, swap_Slot)*/
+   struct spt_entry *entry = spt_find_entry(&cur->spt, fault_addr);
+   
+   /* Stack Growth Check */
    if (entry == NULL)
    {
       if (is_stack_access(esp, fault_addr))
          entry = grow_stack(esp, fault_addr, cur);
       else
-         exit(-1);
+         exit(-1); /* Invalid Access : None in SPT */
    }
-   
+
    void *kpage = frame_allocate(PAL_USER, upage);
    load_page(entry, kpage);
    map_page(entry, upage, kpage, cur);
