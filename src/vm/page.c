@@ -27,7 +27,6 @@ void spt_destructor(struct hash_elem *e, void *aux UNUSED)
             frame_table_find_entry_delete(pagedir_get_page(pagedir, entry->upage));
         }
     }
-    // frame_table_find_entry_delete(entry->upage);
     free(entry);
 }
 
@@ -50,7 +49,6 @@ void spt_remove_page(struct hash *spt, void *upage)
     entry.upage = upage;
     e = hash_delete(spt, &entry.hash_elem);
     
-
     if (e != NULL) {
         struct spt_entry *entry = hash_entry(e, struct spt_entry, hash_elem);
         uint32_t *pagedir = thread_current()->pagedir;
@@ -61,10 +59,8 @@ void spt_remove_page(struct hash *spt, void *upage)
                 frame_table_find_entry_delete(pagedir_get_page(pagedir, entry->upage));
             }
         }
-        // frame_table_find_entry_delete(entry->upage);
         free(entry);
-    }
-         
+    }         
 }
 
 void spt_cleanup_partial(struct hash *spt, void *upage_start) 
@@ -195,26 +191,3 @@ bool mmt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *a
     const struct mmt_entry *entry_b = hash_entry(b, struct mmt_entry, hash_elem);
     return entry_a->mmap_id < entry_b->mmap_id;
 }
-
-// struct mmt_entry *mmt_find_by_file_and_addr(struct hash *mmt, struct file *file, void *addr)
-// {
-//     struct hash_iterator it;
-//     struct mmt_entry *entry;
-
-//     hash_first(&it, mmt);
-//     while (hash_next(&it))
-//     {
-//         entry = hash_entry(hash_cur(&it), struct mmt_entry, hash_elem);
-
-
-//         if (entry->file == file)
-//         {
-//             if (entry->upage <= addr && addr < entry->upage + file_length(entry->file))
-//             {
-//                 return entry; // 중복 매핑 발견
-//             }
-//         }
-//     }
-
-//     return NULL; // 중복 없음
-// }
