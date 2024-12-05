@@ -11,7 +11,6 @@
 struct swap_table swap_table;
 static struct lock swap_lock;
 
-
 void swap_table_init(void)
 {
     /* Swap Disk 초기화 */

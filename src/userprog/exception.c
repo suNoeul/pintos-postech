@@ -20,7 +20,8 @@ static long long page_fault_cnt;
 
 static void kill(struct intr_frame *);
 static void page_fault(struct intr_frame *);
-bool is_stack_access(void *esp, void *fault_addr);
+static bool is_stack_access(void *esp, void *fault_addr);
+
 /* Registers handlers for interrupts that can be caused by user
    programs.
 
@@ -132,7 +133,6 @@ static void page_fault(struct intr_frame *f)
    void *fault_addr; /* Fault address. */
 
 
-
    /* Obtain faulting address(virtual address that was accessed to cause the fault)
       - 해당 pointer는 code나 data일 수 있음.
       - 해당 주소에 의해 page fault가 발생한 것이 아닐 수도 있음. (that's f->eip). */
@@ -176,29 +176,25 @@ static void page_fault(struct intr_frame *f)
       else
          exit(-1);
    }
+   
    void *kpage = frame_allocate(PAL_USER, upage);
-   page_load(entry, kpage);
+   load_page(entry, kpage);
    map_page(entry, upage, kpage, cur);
 }
 
-bool is_stack_access(void *esp, void *fault_addr)
+static bool is_stack_access(void *esp, void *fault_addr)
 {
    // 유효한 사용자 주소인지 확인
    if (!is_user_vaddr(fault_addr))
-   {
       return false;
-   }
-
+   
    // fault_addr가 스택 영역 내에 있는지 확인
    if (fault_addr <= PHYS_BASE - MAX_STACK_SIZE || fault_addr >= PHYS_BASE)
-   {
       return false;
-   }
-
+   
    // fault_addr가 스택 확장 조건을 만족하는지 확인
    if (fault_addr >= (uint8_t *)esp - 32)
-   {
       return true;
-   }
+   
    return false;
 }

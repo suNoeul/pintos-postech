@@ -620,7 +620,7 @@ struct spt_entry *grow_stack(void *esp, void *fault_addr, struct thread *cur)
   return spt_find_page(&cur->spt, upage);
 }
 
-void page_load(struct spt_entry *entry, void *kpage)
+void load_page(struct spt_entry *entry, void *kpage)
 {
   switch (entry->status)
   {

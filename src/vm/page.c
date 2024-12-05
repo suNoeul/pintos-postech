@@ -7,37 +7,15 @@
 #include "lib/user/syscall.h"
 #include "vm/frame.h"
 
+/* SPT function Definition*/
 void spt_init(struct hash *spt)
 {
     hash_init(spt, spt_hash_func, spt_less_func, NULL);
 }
 
-void mmt_init(struct hash *mmt) 
-{
-    hash_init(mmt, mmt_hash_func, mmt_less_func, NULL);
-}
-
-unsigned mmt_hash_func(const struct hash_elem *e, void *aux)
-{
-    const struct mmt_entry *entry = hash_entry(e, struct mmt_entry, hash_elem);
-    return hash_bytes(&entry->mmap_id, sizeof(entry->mmap_id));
-}
-
-bool mmt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux)
-{
-    const struct mmt_entry *entry_a = hash_entry(a, struct mmt_entry, hash_elem);
-    const struct mmt_entry *entry_b = hash_entry(b, struct mmt_entry, hash_elem);
-    return entry_a->mmap_id < entry_b->mmap_id;
-}
-
 void spt_destroy(struct hash *spt)
 {
     hash_destroy(spt, spt_destructor);
-}
-
-void mmt_destroy(struct hash *mmt)
-{
-    hash_destroy(mmt, mmt_destructor);
 }
 
 void spt_destructor(struct hash_elem *e, void *aux UNUSED)
@@ -49,21 +27,7 @@ void spt_destructor(struct hash_elem *e, void *aux UNUSED)
             frame_table_find_entry_delete(pagedir_get_page(pagedir, entry->upage));
         }
     }
-    frame_table_find_entry_delete(entry->upage);
-    free(entry);
-}
-
-void mmt_destructor(struct hash_elem *e, void *aux UNUSED)
-{
-    struct spt_entry *entry = hash_entry(e, struct mmt_entry, hash_elem);
-    uint32_t *pagedir = thread_current()->pagedir;
-    if (entry)
-    {
-        if (entry->status == PAGE_PRESENT)
-        {
-            frame_table_find_entry_delete(pagedir_get_page(pagedir, entry->upage));
-        }
-    }
+    // frame_table_find_entry_delete(entry->upage);
     free(entry);
 }
 
@@ -97,7 +61,7 @@ void spt_remove_page(struct hash *spt, void *upage)
                 frame_table_find_entry_delete(pagedir_get_page(pagedir, entry->upage));
             }
         }
-        frame_table_find_entry_delete(entry->upage);
+        // frame_table_find_entry_delete(entry->upage);
         free(entry);
     }
          
@@ -154,6 +118,32 @@ bool spt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *a
     return entry_a->upage < entry_b->upage;
 }
 
+
+/* MMT function Definition */
+void mmt_init(struct hash *mmt) 
+{
+    hash_init(mmt, mmt_hash_func, mmt_less_func, NULL);
+}
+
+void mmt_destroy(struct hash *mmt)
+{
+    hash_destroy(mmt, mmt_destructor);
+}
+
+void mmt_destructor(struct hash_elem *e, void *aux UNUSED)
+{
+    struct spt_entry *entry = hash_entry(e, struct mmt_entry, hash_elem);
+    uint32_t *pagedir = thread_current()->pagedir;
+    if (entry)
+    {
+        if (entry->status == PAGE_PRESENT)
+        {
+            frame_table_find_entry_delete(pagedir_get_page(pagedir, entry->upage));
+        }
+    }
+    free(entry);
+}
+
 struct mmt_entry *mmt_find_entry(struct hash *mmt, mapid_t *mmap_id)
 {
     struct mmt_entry entry;
@@ -193,25 +183,38 @@ bool mmt_add_page(struct hash* mmt, mapid_t id, struct file *file, void *upage)
     return result == NULL; // NULL 반환 시 성공적으로 삽입된 것
 }
 
-struct mmt_entry *mmt_find_by_file_and_addr(struct hash *mmt, struct file *file, void *addr)
+unsigned mmt_hash_func(const struct hash_elem *e, void *aux)
 {
-    struct hash_iterator it;
-    struct mmt_entry *entry;
-
-    hash_first(&it, mmt);
-    while (hash_next(&it))
-    {
-        entry = hash_entry(hash_cur(&it), struct mmt_entry, hash_elem);
-
-
-        if (entry->file == file)
-        {
-            if (entry->upage <= addr && addr < entry->upage + file_length(entry->file))
-            {
-                return entry; // 중복 매핑 발견
-            }
-        }
-    }
-
-    return NULL; // 중복 없음
+    const struct mmt_entry *entry = hash_entry(e, struct mmt_entry, hash_elem);
+    return hash_bytes(&entry->mmap_id, sizeof(entry->mmap_id));
 }
+
+bool mmt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux)
+{
+    const struct mmt_entry *entry_a = hash_entry(a, struct mmt_entry, hash_elem);
+    const struct mmt_entry *entry_b = hash_entry(b, struct mmt_entry, hash_elem);
+    return entry_a->mmap_id < entry_b->mmap_id;
+}
+
+// struct mmt_entry *mmt_find_by_file_and_addr(struct hash *mmt, struct file *file, void *addr)
+// {
+//     struct hash_iterator it;
+//     struct mmt_entry *entry;
+
+//     hash_first(&it, mmt);
+//     while (hash_next(&it))
+//     {
+//         entry = hash_entry(hash_cur(&it), struct mmt_entry, hash_elem);
+
+
+//         if (entry->file == file)
+//         {
+//             if (entry->upage <= addr && addr < entry->upage + file_length(entry->file))
+//             {
+//                 return entry; // 중복 매핑 발견
+//             }
+//         }
+//     }
+
+//     return NULL; // 중복 없음
+// }

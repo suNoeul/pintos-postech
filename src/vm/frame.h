@@ -11,6 +11,7 @@ struct frame_table_entry
     void *upage;            // 가상 메모리 주소 (User Page)
     struct thread *owner;   // 이 프레임을 소유한 스레드
     bool pinned;            // 핀 여부 (페이지 교체 방지)
+    
     struct list_elem elem;  // Frame Table 리스트 요소
 };
 

@@ -18,7 +18,6 @@ struct swap_table {
 /* Swap Table 전역 변수 */
 extern struct swap_table swap_table;
 
-
 /* Swap Table 초기화 함수 */
 void swap_table_init(void);
 

@@ -29,21 +29,21 @@ void *frame_allocate(enum palloc_flags flags, void *upage)
     void *frame = NULL;
     frame = palloc_get_page(flags);
     
-    // if(frame == NULL){
+    if(frame == NULL){
+        if (!frame_evict()) 
+            ASSERT(false);
+        frame = palloc_get_page(flags);
+    }
+    frame_table_add_entry(frame, upage);
+
+    // if(frame != NULL)
+    //     frame_table_add_entry(frame, upage);
+    // else { // Frame allocation 실패 시, Evict Frame 호출       
     //     if (!frame_evict()) // Eviction도 실패한 경우 NULL 반환
     //         ASSERT(false);
     //     frame = palloc_get_page(flags);
+    //     frame_table_add_entry(frame, upage);
     // }
-    // frame_table_add_entry(frame, upage);
-
-    if(frame != NULL)
-        frame_table_add_entry(frame, upage);
-    else { // Frame allocation 실패 시, Evict Frame 호출       
-        if (!frame_evict()) // Eviction도 실패한 경우 NULL 반환
-            ASSERT(false);
-        frame = palloc_get_page(flags);
-        frame_table_add_entry(frame, upage);
-    }
     return frame;
 }
 
@@ -73,6 +73,29 @@ bool frame_evict(void)
     ASSERT(victim_entry != NULL);
     return swap_out_evicted_page(victim_entry);
 }
+
+bool frame_table_find_entry_delete(void *kpage)
+{
+    struct frame_table_entry *fte;
+    struct list_elem *e;
+    bool success = false;
+    lock_acquire(&frame_lock);
+    for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))
+    {
+        fte = list_entry(e, struct frame_table_entry, elem);
+        if (fte->frame == kpage)
+        {
+            success = true;
+            list_remove(e);
+            free(fte);
+            break;
+        }
+    }
+    lock_release(&frame_lock);
+
+    return success;
+}
+
 
 /* Static function definition */
 static bool frame_table_add_entry(void *frame, void *upage)
@@ -181,28 +204,6 @@ static struct frame_table_entry *frame_table_find_victim(void)
     /* Not Reached : 두 바퀴 순회에도 적절한 프레임을 찾지 못한 경우는 발생하지 않음 */
 }
 
-bool frame_table_find_entry_delete(void *kpage)
-{
-    struct frame_table_entry *fte;
-    struct list_elem *e;
-    bool success = false;
-    lock_acquire(&frame_lock);
-    for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))
-    {
-        fte = list_entry(e, struct frame_table_entry, elem);
-        if (fte->frame == kpage)
-        {
-            success = true;
-            list_remove(e);
-            free(fte);
-            break;
-        }
-    }
-    lock_release(&frame_lock);
-
-    return success;
-}
-
 static bool swap_out_evicted_page (struct frame_table_entry *victim_entry)
 {
     ASSERT(victim_entry != NULL)
@@ -214,7 +215,7 @@ static bool swap_out_evicted_page (struct frame_table_entry *victim_entry)
         PANIC("Invalid victim frame state!");
 
     size_t swap_index = swap_out(frame);
-    struct spt_entry *spte = spt_find_page(&owner->spt, upage);
+    struct spt_entry *spte = spt_find_entry(&owner->spt, upage);
     if (spte == NULL)
         PANIC("SPT entry not found for evicted page!");
 
