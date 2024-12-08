@@ -116,6 +116,7 @@ static struct frame_table_entry *frame_table_find_victim(void)
         }
 
         // Reference Bit와 Dirty Bit 가져오기
+        ASSERT(current_entry->owner != NULL);
         ASSERT(current_entry->owner->pagedir != NULL);
         accessed = pagedir_is_accessed(current_entry->owner->pagedir, current_entry->upage);
         dirty = pagedir_is_dirty(current_entry->owner->pagedir, current_entry->upage);
