@@ -234,9 +234,7 @@ static bool swap_out_evicted_page (struct frame_table_entry *victim_entry)
     spte->swap_index = swap_index; // 스왑 인덱스 저장
 
     pagedir_clear_page(owner->pagedir, upage);
-    printf("duduA\n");
     frame_deallocate(frame);
-    printf("duduB\n");
     return true;
 }
 
