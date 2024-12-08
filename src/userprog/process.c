@@ -235,14 +235,14 @@ void process_exit(void)
 {
   struct thread *cur = thread_current();
   uint32_t *pd;
-  lock_acquire(&frame_lock);
+  
 
   for (int i = 0; i < cur->mapid; i++)
     munmap(i);
 
   /* Project3 */
   spt_destroy(&thread_current()->spt);
-
+  lock_acquire(&frame_lock);
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -259,6 +259,7 @@ void process_exit(void)
     pagedir_activate(NULL);
     pagedir_destroy(pd);
   }
+  lock_release(&frame_lock);
 
   /*oom*/
   for (int i = 2; i < 126; i++)
@@ -269,7 +270,6 @@ void process_exit(void)
 
   palloc_free_page(cur->fd_table);
   file_close(cur->excute_file_name);
-  lock_release(&frame_lock);
 
   /* sema control for parent, child */
   sema_up(&cur->wait_sys);   // wake a Parent up
