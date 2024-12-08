@@ -197,9 +197,6 @@ void frame_table_find_entry_delete(struct thread* owner)
             e = list_remove(e);
             free(fte);
         }
-        else {
-            e = list_next(e);
-        }
     }
     lock_release(&frame_lock);
 }
