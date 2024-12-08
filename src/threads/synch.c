@@ -200,8 +200,6 @@ void lock_init(struct lock *lock)
    we need to sleep. */
 void lock_acquire(struct lock *lock)
 {
-  if(lock == &frame_lock)
-    printf("earning frame\n");
   ASSERT(lock != NULL);
   ASSERT(!intr_context());
   ASSERT(!lock_held_by_current_thread(lock));
@@ -212,6 +210,8 @@ void lock_acquire(struct lock *lock)
     donate_priority(lock);
 
   sema_down(&lock->semaphore);
+  if (lock == &frame_lock)
+    printf("earning frame\n");
 
   cur->waiting_lock = NULL;
   lock->holder = cur;
@@ -245,14 +245,14 @@ void lock_release(struct lock *lock)
 {
   ASSERT(lock != NULL);
   ASSERT(lock_held_by_current_thread(lock));
-  if(lock == &frame_lock)
-    printf("release frame\n");
 
   if (!thread_mlfqs)
     recover_priority(lock);
 
   lock->holder = NULL;
   sema_up(&lock->semaphore);
+  if (lock == &frame_lock)
+    printf("release frame\n");
 }
 
 /* Returns true if the current thread holds LOCK, false
