@@ -22,13 +22,14 @@ main (int argc, char *argv[])
 
   /* Encrypt zeros. */
   arc4_init (&arc4, key, strlen (key));
+  msg("dudu4");
   arc4_crypt (&arc4, buf, SIZE);
-  msg("dudu2");
+  msg("dudu6");
 
   /* Decrypt back to zeros. */
   arc4_init (&arc4, key, strlen (key));
   arc4_crypt (&arc4, buf, SIZE);
-  msg("dudu3");
+  msg("dudu7");
 
   /* Check that it's all zeros. */
   for (i = 0; i < SIZE; i++)
