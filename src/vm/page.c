@@ -56,7 +56,10 @@ void spt_destructor(struct hash_elem *e, void *aux UNUSED)
                 fte = list_entry(e, struct frame_table_entry, elem);
                 if (fte->frame == frame)
                 {
-                    list_remove(e);          // Frame Table에서 제거
+                    if(e == hand)
+                        hand = list_remove(e);      // Frame Table에서 제거
+                    else
+                        list_remove(e);
                     palloc_free_page(frame); // 물리 메모리 반환
                     free(fte);               // Frame Table Entry 해제
                     break;

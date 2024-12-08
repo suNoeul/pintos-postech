@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 
-struct list_elem *hand = NULL; // frame_table 순회를 위한 커서
+
 
 /* functionality to manage frame_table */
 static bool frame_table_add_entry (void *frame, void *upage);
@@ -61,7 +61,10 @@ void frame_deallocate(void *frame)
     for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))    {
         fte = list_entry(e, struct frame_table_entry, elem);
         if (fte->frame == frame) {
-            list_remove(e); // Frame Table에서 제거
+            if (e == hand)
+                hand = list_remove(e); // Frame Table에서 제거
+            else
+                list_remove(e);
             palloc_free_page(frame); // 물리 메모리 반환
             free(fte);      // Frame Table Entry 해제
             break;
