@@ -130,14 +130,13 @@ static struct frame_table_entry *frame_table_find_victim(void)
         ASSERT(current_entry->owner != NULL);
 
         // pinned 여부를 확인하고, pinned된 경우 건너뜀
-        if (current_entry->pinned)
+        if (current_entry->pinned && current_entry->owner->pagedir == NULL)
         {
             hand = list_next(hand) == list_end(&frame_table) ? list_begin(&frame_table) : list_next(hand);
             continue;
         }
 
         // Reference Bit와 Dirty Bit 가져오기
-        ASSERT(current_entry->owner->pagedir != NULL);
         // ASSERT(current_entry->owner->pagedir != NULL);
         accessed = pagedir_is_accessed(current_entry->owner->pagedir, current_entry->upage);
         dirty = pagedir_is_dirty(current_entry->owner->pagedir, current_entry->upage);
