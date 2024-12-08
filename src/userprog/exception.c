@@ -174,6 +174,7 @@ static void page_fault(struct intr_frame *f)
       }
       exit(-1);
    }
+   printf("frame_handle\n");
    lock_acquire(&frame_lock);
 
    struct spt_entry *entry = spt_find_page(&cur->spt, fault_addr);
