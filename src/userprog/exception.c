@@ -174,7 +174,7 @@ static void page_fault(struct intr_frame *f)
       printf("<%x>ddudu\n", fault_addr);
       if (is_stack_access(esp, fault_addr))
          entry = grow_stack(esp, fault_addr, cur);
-      else
+      else 
          exit(-101);
    }
    printf("<%x>normal", fault_addr);
