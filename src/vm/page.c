@@ -48,8 +48,24 @@ void spt_destructor(struct hash_elem *e, void *aux UNUSED)
     if(entry) {
         if(entry->status == PAGE_PRESENT) {
             ASSERT(pagedir != NULL);
-            frame_deallocate(pagedir_get_page(pagedir, entry->upage));
+            void *frame = pagedir_get_page(pagedir, entry->upage);
+            struct frame_table_entry *fte;
+            struct list_elem *e;
+            ASSERT(!lock_held_by_current_thread(&frame_lock));
+            lock_acquire(&frame_lock);
+            for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))
+            {
+                fte = list_entry(e, struct frame_table_entry, elem);
+                if (fte->frame == frame)
+                {
+                    list_remove(e);          // Frame Table에서 제거
+                    palloc_free_page(frame); // 물리 메모리 반환
+                    free(fte);               // Frame Table Entry 해제
+                    break;
+                }
+            }
             pagedir_clear_page(pagedir, entry->upage);
+            lock_release(&frame_lock);
         }
         else if(entry->status == PAGE_SWAP) {
             swap_free_slot(entry->swap_index);
