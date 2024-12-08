@@ -379,10 +379,6 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
 
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create();
-  printf("dudu <%s>\n", t->name);
-  printf("dudu tid <%d>\n", t->tid);
-  printf("dudu pdir x <%x>\n", t->pagedir);
-  printf("dudu pdir <%d>\n", t->pagedir == NULL);
   
   if (t->pagedir == NULL)
     goto done;
