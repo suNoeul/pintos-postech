@@ -190,7 +190,7 @@ bool is_stack_access(void *esp, void *fault_addr)
    }
 
    // fault_addr가 스택 영역 내에 있는지 확인
-   if (fault_addr >= PHYS_BASE - MAX_STACK_SIZE || fault_addr >= PHYS_BASE)
+   if (fault_addr < PHYS_BASE - MAX_STACK_SIZE || fault_addr >= PHYS_BASE)
    {
       printf("dududu\n");
       return false;
