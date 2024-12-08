@@ -17,6 +17,7 @@ arc4_init (struct arc4 *arc4, const void *key_, size_t size)
   size_t key_idx;
   uint8_t *s;
   int i, j;
+  printf("dudu99\n");
 
   s = arc4->s;
   arc4->i = arc4->j = 0;
@@ -29,6 +30,7 @@ arc4_init (struct arc4 *arc4, const void *key_, size_t size)
       if (++key_idx >= size)
         key_idx = 0;
     }
+    printf("dudu100\n");
 }
 
 void
