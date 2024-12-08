@@ -244,7 +244,6 @@ void process_exit(void)
   spt_destroy(&cur->spt);
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
-  frame_table_all_frame_owner(cur);
   pd = cur->pagedir;
   if (pd != NULL)
   {
@@ -266,10 +265,8 @@ void process_exit(void)
     if (cur->fd_table[i] != NULL)
       file_close(cur->fd_table[i]);
   }
-  printf("duduA\n");
 
   palloc_free_page(cur->fd_table);
-  printf("duduB\n");
   file_close(cur->excute_file_name);
 
   /* sema control for parent, child */

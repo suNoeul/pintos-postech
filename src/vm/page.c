@@ -48,7 +48,8 @@ void spt_destructor(struct hash_elem *e, void *aux UNUSED)
     if(entry) {
         if(entry->status == PAGE_PRESENT) {
             ASSERT(pagedir != NULL);
-            frame_pin(pagedir_get_page(pagedir, entry->upage));
+            frame_deallocate(pagedir_get_page(pagedir, entry->upage));
+            pagedir_clear_page(pagedir, entry->upage);
         }
         else if(entry->status == PAGE_SWAP) {
             swap_free_slot(entry->swap_index);
