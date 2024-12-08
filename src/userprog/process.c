@@ -463,7 +463,7 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
       break;
     }
   }
-
+  lock_release(&file_lock);
   /* Set up stack. */
   if (!setup_stack(esp))
     goto done;
@@ -475,7 +475,8 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
 
 done:
   /* We arrive here whether the load is successful or not. */
-  lock_release(&file_lock);
+  if(lock_held_by_current_thread(&file_lock))
+    lock_release(&file_lock);
   return success;
 }
 
