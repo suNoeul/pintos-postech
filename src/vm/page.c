@@ -46,10 +46,10 @@ void spt_destructor(struct hash_elem *e, void *aux UNUSED)
     uint32_t *pagedir = thread_current()->pagedir;
     if(entry) {
         if(entry->status == PAGE_PRESENT) {
+            ASSERT(pagedir != NULL && printf("dudu_spt\n"));
             frame_table_find_entry_delete(pagedir_get_page(pagedir, entry->upage));
         }
     }
-    frame_table_find_entry_delete(entry->upage);
     free(entry);
 }
 
@@ -61,6 +61,7 @@ void mmt_destructor(struct hash_elem *e, void *aux UNUSED)
     {
         if (entry->status == PAGE_PRESENT)
         {
+            ASSERT(pagedir != NULL && printf("dudu_mmt\n"));
             frame_table_find_entry_delete(pagedir_get_page(pagedir, entry->upage));
         }
     }
