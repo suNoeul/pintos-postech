@@ -126,6 +126,8 @@ static struct frame_table_entry *frame_table_find_victim(void)
         }
             
         current_entry = list_entry(hand, struct frame_table_entry, elem);
+        ASSERT(current_entry != NULL);
+        ASSERT(current_entry->owner != NULL);
 
         // pinned 여부를 확인하고, pinned된 경우 건너뜀
         if (current_entry->pinned)
