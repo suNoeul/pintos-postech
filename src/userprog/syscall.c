@@ -210,6 +210,7 @@ int read(int fd, void *buffer, unsigned size)
     exit(-1);
   }
   unsigned int count;
+  frame_pin(buffer);
 
   /* 1(STDOUT_FILENO) */
   if (fd == STDOUT_FILENO) 
@@ -230,6 +231,7 @@ int read(int fd, void *buffer, unsigned size)
     if(file != NULL){
       lock_acquire(&file_lock);
       count = file_read(file, buffer, size);
+      frame_unpin(buffer);
       lock_release(&file_lock);
       return count;
     }

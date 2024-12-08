@@ -75,7 +75,6 @@ void frame_deallocate(void *frame)
 
 bool frame_evict(void) 
 {
-    lock_acquire(&frame_lock); // frame_table 보호를 위해 lock 설정
     struct frame_table_entry *victim_entry;
     victim_entry = frame_table_find_victim();
     ASSERT(victim_entry != NULL);
@@ -94,11 +93,10 @@ static bool frame_table_add_entry(void *frame, void *upage)
     fte->upage = upage;
     fte->owner = thread_current();
     fte->pinned = false;  // 기본적으로 핀 False 처리 (교체)
-    ASSERT(!lock_held_by_current_thread(&frame_lock));
 
-    lock_acquire(&frame_lock);
+    
     list_push_back(&frame_table, &fte->elem);
-    lock_release(&frame_lock);
+    
 
     return true;
 }
@@ -258,7 +256,6 @@ static bool swap_out_evicted_page (struct frame_table_entry *victim_entry)
             break;
         }
     }
-    lock_release(&frame_lock);
     return true;
 }
 

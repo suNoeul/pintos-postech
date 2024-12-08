@@ -481,13 +481,16 @@ done:
 /* Create a minimal stack by mapping a zeroed page at the top of user virtual memory. */
 static bool setup_stack(void **esp)
 {
+  lock_acquire(&frame_lock);
   uint8_t *kpage = frame_allocate(PAL_USER | PAL_ZERO, (uint8_t *)PHYS_BASE - PGSIZE);
 
   if (!kpage)
     return false;
   
   if(!install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true)){
+    lock_release(&frame_lock);
     frame_deallocate(kpage);
+    
     return false;
   }
 
@@ -495,11 +498,14 @@ static bool setup_stack(void **esp)
   struct thread *cur = thread_current();
   if (!spt_add_page(&cur->spt, ((uint8_t *)PHYS_BASE) - PGSIZE, NULL, 0, 0, PGSIZE, true, PAGE_PRESENT)){
     install_page(((uint8_t *)PHYS_BASE) - PGSIZE, NULL, false); // Rollback SPT when fail
+    lock_release(&frame_lock);
     frame_deallocate(kpage);
+    
     return false;
   }
 
-  *esp = PHYS_BASE; 
+  *esp = PHYS_BASE;
+  lock_release(&frame_lock);
   return true;
 }
 
