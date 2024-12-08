@@ -645,6 +645,7 @@ void page_load(struct spt_entry *entry, void *kpage)
     break;
 
   default:
+    lock_release(&frame_lock);
     frame_deallocate(kpage);
     exit(-1);
   }
@@ -654,6 +655,7 @@ void map_page(struct spt_entry *entry, void *upage, void *kpage, struct thread *
 {
   if (!pagedir_set_page(cur->pagedir, upage, kpage, entry->writable))
   {
+    lock_release(&frame_lock);
     frame_deallocate(kpage);
     exit(-1);
   }
