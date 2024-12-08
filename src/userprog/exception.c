@@ -172,10 +172,14 @@ static void page_fault(struct intr_frame *f)
    struct spt_entry *entry = spt_find_page(&cur->spt, fault_addr);
    if (entry == NULL)
    {
-      if (is_stack_access(esp, fault_addr))
+      if (is_stack_access(esp, fault_addr)) {
          entry = grow_stack(esp, fault_addr, cur);
-      else
+         printf("<%d>dudu1\n", entry->upage);
+      }
+      else {
+         printf("<%d>dudu2\n", entry->upage);
          exit(-101);
+      }
    }
    void *kpage = frame_allocate(PAL_USER, upage);
    page_load(entry, kpage);
