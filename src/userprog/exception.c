@@ -175,7 +175,8 @@ static void page_fault(struct intr_frame *f)
    {
       if (is_stack_access(esp, fault_addr))
          entry = grow_stack(esp, fault_addr, cur);
-      else 
+      else
+         lock_release(&frame_lock);
          exit(-101);
    }
    void *kpage = frame_allocate(PAL_USER, upage);
