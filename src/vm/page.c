@@ -67,10 +67,6 @@ void spt_destructor(struct hash_elem *e, void *aux UNUSED)
                 }
             }
         }
-        else if(entry->status == PAGE_SWAP) {
-            swap_free_slot(entry->swap_index);
-            entry->swap_index = NULL;
-        }
     }
     free(entry);
 }
