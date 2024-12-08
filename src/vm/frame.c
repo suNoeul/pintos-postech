@@ -75,6 +75,7 @@ void frame_deallocate(void *frame)
 
 bool frame_evict(void) 
 {
+    lock_acquire(&frame_lock); // frame_table 보호를 위해 lock 설정
     struct frame_table_entry *victim_entry;
     victim_entry = frame_table_find_victim();
     ASSERT(victim_entry != NULL);
@@ -108,9 +109,8 @@ static struct frame_table_entry *frame_table_find_victim(void)
     struct list_elem *start = hand;          // 순회의 시작점을 저장
     struct frame_table_entry *current_entry;
     bool accessed, dirty;
-    ASSERT(!lock_held_by_current_thread(&frame_lock));
 
-    lock_acquire(&frame_lock); // frame_table 보호를 위해 lock 설정
+    
     
     do /* 첫 번째 순회 */
     { 
@@ -137,7 +137,6 @@ static struct frame_table_entry *frame_table_find_victim(void)
 
         if (!accessed && !dirty) { // Reference Bit = 0, Dirty Bit = 0: 즉시 리턴
             hand = list_next(hand) == list_end(&frame_table) ? list_begin(&frame_table) : list_next(hand);
-            lock_release(&frame_lock);
             return current_entry;
         }
         else if (!accessed && dirty && victim == NULL) // Reference Bit = 0, Dirty Bit = 1: victim 후보 저장
@@ -155,7 +154,7 @@ static struct frame_table_entry *frame_table_find_victim(void)
 
     // 첫 번째 순회 후 Dirty victim 반환
     if (victim != NULL) {
-        lock_release(&frame_lock);
+        
         return victim;
     }
     
@@ -178,7 +177,6 @@ static struct frame_table_entry *frame_table_find_victim(void)
         if (!accessed && !dirty) {
             // Reference Bit = 0, Dirty Bit = 0: 즉시 리턴
             hand = start;
-            lock_release(&frame_lock);
             return current_entry;
         }
         else if (!accessed && dirty && victim == NULL) // Reference Bit = 0, Dirty Bit = 1: victim 후보 저장
@@ -192,7 +190,6 @@ static struct frame_table_entry *frame_table_find_victim(void)
     
     hand = start;    
     
-    lock_release(&frame_lock);
     return victim;
     
     /* Not Reached : 두 바퀴 순회에도 적절한 프레임을 찾지 못한 경우는 발생하지 않음 */
@@ -246,6 +243,7 @@ static bool swap_out_evicted_page (struct frame_table_entry *victim_entry)
 
     pagedir_clear_page(owner->pagedir, upage);
     frame_deallocate(frame);
+    lock_release(&frame_lock);
     return true;
 }
 
