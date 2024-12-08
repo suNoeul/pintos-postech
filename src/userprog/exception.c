@@ -177,6 +177,7 @@ static void page_fault(struct intr_frame *f)
       else
          exit(-101);
    }
+   printf("<%x>normal", fault_addr);
    void *kpage = frame_allocate(PAL_USER, upage);
    page_load(entry, kpage);
    map_page(entry, upage, kpage, cur);
