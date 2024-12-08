@@ -98,15 +98,6 @@ void spt_remove_page(struct hash *spt, void *upage)
 
     if (e != NULL) {
         struct spt_entry *entry = hash_entry(e, struct spt_entry, hash_elem);
-        uint32_t *pagedir = thread_current()->pagedir;
-        if (entry)
-        {
-            if (entry->status == PAGE_PRESENT)
-            {
-                pagedir_clear_page(pagedir, upage);
-                frame_deallocate(pagedir_get_page(pagedir, entry->upage));
-            }
-        }
         free(entry);
     }
          
