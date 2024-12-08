@@ -266,8 +266,10 @@ void process_exit(void)
     if (cur->fd_table[i] != NULL)
       file_close(cur->fd_table[i]);
   }
+  printf("duduA\n");
 
   palloc_free_page(cur->fd_table);
+  printf("duduB\n");
   file_close(cur->excute_file_name);
 
   /* sema control for parent, child */

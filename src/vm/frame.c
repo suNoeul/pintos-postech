@@ -62,9 +62,7 @@ void frame_deallocate(void *frame)
         fte = list_entry(e, struct frame_table_entry, elem);
         if (fte->frame == frame) {
             list_remove(e); // Frame Table에서 제거
-            printf("duduA\n");
             palloc_free_page(frame); // 물리 메모리 반환
-            printf("duduB\n");
             free(fte);      // Frame Table Entry 해제
             break;
         }
