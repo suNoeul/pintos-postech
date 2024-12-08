@@ -164,7 +164,6 @@ static void page_fault(struct intr_frame *f)
    struct thread *cur = thread_current();
    void *esp = user ? f->esp : cur->esp;
    void *upage = pg_round_down(fault_addr);
-   bool is_held = lock_held_by_current_thread(&file_lock);
 
    if (is_kernel_vaddr(fault_addr) || !not_present)
       exit(-1);   
@@ -201,5 +200,6 @@ bool is_stack_access(void *esp, void *fault_addr)
    {
       return true;
    }
+   printf("dududu\n");
    return false;
 }
