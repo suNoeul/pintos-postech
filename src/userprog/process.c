@@ -637,14 +637,17 @@ void page_load(struct spt_entry *entry, void *kpage)
   switch (entry->status)
   {
   case PAGE_ZERO:
+    printf("frame_handle111\n");
     page_zero(kpage);
     break;
 
   case PAGE_SWAP:
+    printf("frame_handle222\n");
     page_swap(entry, kpage);
     break;
 
   case PAGE_FILE:
+    printf("frame_handle333\n");
     page_file(entry, kpage);
     break;
 
