@@ -347,9 +347,7 @@ void munmap(mapid_t mapping)
     if (spte->status == PAGE_PRESENT)
     {
       pagedir_clear_page(pagedir, upage);
-      printf("duduA\n");
       frame_deallocate(kpage);
-      printf("duduB\n");
     }
     spt_remove_page(&cur->spt, spte->upage);
     
