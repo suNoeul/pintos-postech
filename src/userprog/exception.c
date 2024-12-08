@@ -164,6 +164,9 @@ static void page_fault(struct intr_frame *f)
    struct thread *cur = thread_current();
    void *esp = user ? f->esp : cur->esp;
    void *upage = pg_round_down(fault_addr);
+   bool is_held = lock_held_by_current_thread(&file_lock);
+   if(is_held)
+      lock_release(&file_lock);
 
    if (is_kernel_vaddr(fault_addr) || !not_present)
       exit(-1);   
@@ -179,6 +182,8 @@ static void page_fault(struct intr_frame *f)
    void *kpage = frame_allocate(PAL_USER, upage);
    page_load(entry, kpage);
    map_page(entry, upage, kpage, cur);
+   if (is_held)
+      lock_acquire(&file_lock);
 }
 
 bool is_stack_access(void *esp, void *fault_addr)

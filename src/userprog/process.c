@@ -175,7 +175,6 @@ static void start_process(void *file_name_)
   /* If load failed, quit. */
   if (!success)
   {
-    printf("dodal\n");
     palloc_free_page(file_name);
     thread_exit();
   }
