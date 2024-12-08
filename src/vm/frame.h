@@ -14,7 +14,8 @@ struct frame_table_entry
     struct list_elem elem;  // Frame Table 리스트 요소
 };
 
-
+struct list frame_table;
+struct lock frame_lock;
 
 void frame_table_init(void);
 void *frame_allocate(enum palloc_flags flags, void *upage);

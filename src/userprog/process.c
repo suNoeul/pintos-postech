@@ -235,6 +235,7 @@ void process_exit(void)
 {
   struct thread *cur = thread_current();
   uint32_t *pd;
+  lock_acquire(&frame_lock);
 
   for (int i = 0; i < cur->mapid; i++)
     munmap(i);
@@ -268,6 +269,7 @@ void process_exit(void)
 
   palloc_free_page(cur->fd_table);
   file_close(cur->excute_file_name);
+  lock_release(&frame_lock);
 
   /* sema control for parent, child */
   sema_up(&cur->wait_sys);   // wake a Parent up

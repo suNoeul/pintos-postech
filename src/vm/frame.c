@@ -7,8 +7,7 @@
 #include "threads/thread.h"
 #include <stdio.h>
 
-struct list frame_table;       
-struct lock frame_lock;
+
 struct list_elem *hand = NULL; // frame_table 순회를 위한 커서
 
 /* functionality to manage frame_table */
