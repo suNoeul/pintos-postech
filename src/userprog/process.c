@@ -637,17 +637,14 @@ void page_load(struct spt_entry *entry, void *kpage)
   switch (entry->status)
   {
   case PAGE_ZERO:
-    printf("frame_handle111\n");
     page_zero(kpage);
     break;
 
   case PAGE_SWAP:
-    printf("frame_handle222\n");
     page_swap(entry, kpage);
     break;
 
   case PAGE_FILE:
-    printf("frame_handle333\n");
     page_file(entry, kpage);
     break;
 
@@ -683,10 +680,13 @@ static void page_swap(struct spt_entry *entry, void *kpage)
 static void page_file(struct spt_entry *entry, void *kpage)
 {
   bool was_holding_lock = lock_held_by_current_thread(&file_lock);
+  printf("frame_handle111\n");
 
   if (!was_holding_lock)
     lock_acquire(&file_lock);
+  printf("frame_handle112\n");
   file_seek(entry->file, entry->ofs);
+  printf("frame_handle113\n");
   if (file_read(entry->file, kpage, entry->page_read_bytes) != (int)entry->page_read_bytes)
   {
     frame_deallocate(kpage);
@@ -694,8 +694,9 @@ static void page_file(struct spt_entry *entry, void *kpage)
       lock_release(&file_lock);
     exit(-1);
   }
+  printf("frame_handle114\n");
   memset(kpage + entry->page_read_bytes, 0, entry->page_zero_bytes);
-
+  printf("frame_handle115\n");
   if (!was_holding_lock)
     lock_release(&file_lock);
 }
