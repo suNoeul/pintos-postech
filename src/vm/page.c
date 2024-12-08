@@ -61,11 +61,11 @@ void spt_destructor(struct hash_elem *e, void *aux UNUSED)
                     else
                         list_remove(e);
                     palloc_free_page(frame); // 물리 메모리 반환
+                    pagedir_clear_page(pagedir, entry->upage);
                     free(fte);               // Frame Table Entry 해제
                     break;
                 }
             }
-            pagedir_clear_page(pagedir, entry->upage);
         }
         else if(entry->status == PAGE_SWAP) {
             swap_free_slot(entry->swap_index);
