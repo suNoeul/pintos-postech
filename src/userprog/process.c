@@ -244,7 +244,7 @@ void process_exit(void)
   /* Project3 */
   lock_acquire(&frame_lock);
   spt_destroy(&cur->spt);
-  lock_release(&frame_lock);
+  
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -261,6 +261,7 @@ void process_exit(void)
     pagedir_activate(NULL);
     pagedir_destroy(pd);
   }
+  lock_release(&frame_lock);
 
   /*oom*/
   for (int i = 2; i < 126; i++)
