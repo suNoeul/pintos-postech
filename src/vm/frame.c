@@ -45,6 +45,7 @@ void *frame_allocate(enum palloc_flags flags, void *upage)
         frame = palloc_get_page(flags);
         ASSERT(frame_table_add_entry(frame, upage));
     }
+    ASSERT(frame != NULL);
     return frame;
 }
 
