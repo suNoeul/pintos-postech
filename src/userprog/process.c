@@ -380,6 +380,7 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
   t->pagedir = pagedir_create();
   printf("dudu <%s>\n", t->name);
   printf("dudu tid <%d>\n", t->tid);
+  printf("dudu tid <%x>\n", t->pagedir);
   if (t->pagedir == NULL)
     goto done;
   process_activate();
