@@ -242,8 +242,8 @@ static bool swap_out_evicted_page (struct frame_table_entry *victim_entry)
     spte->swap_index = swap_index; // 스왑 인덱스 저장
 
     pagedir_clear_page(owner->pagedir, upage);
-    frame_deallocate(frame);
     lock_release(&frame_lock);
+    frame_deallocate(frame);
     return true;
 }
 
