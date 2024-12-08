@@ -194,7 +194,7 @@ void frame_table_find_entry_delete(struct thread* owner)
         fte = list_entry(e, struct frame_table_entry, elem);
         if (fte->owner == owner)
         {
-            list_remove(e);
+            e = list_remove(e);
             free(fte);
         }
         else {
