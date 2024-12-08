@@ -677,6 +677,7 @@ static void page_swap(struct spt_entry *entry, void *kpage)
 
 static void page_file(struct spt_entry *entry, void *kpage)
 {
+  lock_release(&frame_lock);
   bool was_holding_lock = lock_held_by_current_thread(&file_lock);
 
   if (!was_holding_lock)
@@ -693,4 +694,5 @@ static void page_file(struct spt_entry *entry, void *kpage)
 
   if (!was_holding_lock)
     lock_release(&file_lock);
+  lock_acquire(&frame_lock);
 }
