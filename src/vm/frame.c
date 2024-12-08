@@ -189,13 +189,16 @@ void frame_table_find_entry_delete(struct thread* owner)
     struct frame_table_entry *fte;
     struct list_elem *e;
     lock_acquire(&frame_lock);
-    for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))
+    for (e = list_begin(&frame_table); e != list_end(&frame_table);)
     {
         fte = list_entry(e, struct frame_table_entry, elem);
         if (fte->owner == owner)
         {
-            e = list_remove(e);
+            list_remove(e);
             free(fte);
+        }
+        else {
+            e = list_next(e);
         }
     }
     lock_release(&frame_lock);
