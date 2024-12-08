@@ -18,14 +18,17 @@ main (int argc, char *argv[])
   size_t i;
 
   test_name = "child-linear";
+  msg("dudu1");
 
   /* Encrypt zeros. */
   arc4_init (&arc4, key, strlen (key));
   arc4_crypt (&arc4, buf, SIZE);
+  msg("dudu2");
 
   /* Decrypt back to zeros. */
   arc4_init (&arc4, key, strlen (key));
   arc4_crypt (&arc4, buf, SIZE);
+  msg("dudu3");
 
   /* Check that it's all zeros. */
   for (i = 0; i < SIZE; i++)
