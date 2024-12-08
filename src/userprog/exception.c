@@ -174,11 +174,10 @@ static void page_fault(struct intr_frame *f)
    {
       if (is_stack_access(esp, fault_addr)) {
          entry = grow_stack(esp, fault_addr, cur);
-         printf("<%d>dudu1\n", entry->upage);
+         printf("<%x>dudu1\n", entry->upage);
       }
       else {
-         printf("<%d>dudu2\n", entry->upage);
-         
+         printf("<%x>dudu2\n", entry->upage);
          exit(-101);
       }
    }
