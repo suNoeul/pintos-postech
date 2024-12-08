@@ -393,12 +393,13 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
   if (file == NULL)
   {
     printf("load: %s: open failed\n", file_name);
+    lock_release(&file_lock);
     goto done;
   }
   /* load(excutable file open) 성공 시 실행 파일에 쓰기 방지 설정 */
   file_deny_write(file);        // 실행 파일에 대한 쓰기 방지
   t->excute_file_name = file;   // process_exit 때 접근 가능하도록 file 주소 저장
-
+  lock_release(&file_lock);
   /* Read and verify executable header. */
   if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\1\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 3 || ehdr.e_version != 1 || ehdr.e_phentsize != sizeof(struct Elf32_Phdr) || ehdr.e_phnum > 1024)
   {
@@ -463,7 +464,6 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
       break;
     }
   }
-  lock_release(&file_lock);
   /* Set up stack. */
   if (!setup_stack(esp))
     goto done;
