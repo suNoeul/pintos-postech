@@ -244,6 +244,7 @@ void process_exit(void)
   spt_destroy(&cur->spt);
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
+  frame_table_all_frame_owner(cur);
   pd = cur->pagedir;
   if (pd != NULL)
   {
@@ -256,7 +257,6 @@ void process_exit(void)
        that's been freed (and cleared). */
     cur->pagedir = NULL;
     pagedir_activate(NULL);
-    frame_table_find_entry_delete(cur);
     pagedir_destroy(pd);
   }
 

@@ -85,7 +85,7 @@ static bool frame_table_add_entry(void *frame, void *upage)
     fte->frame = frame;
     fte->upage = upage;
     fte->owner = thread_current();
-    fte->pinned = false;  // 기본적으로 핀 False 처리 (교체 방지)
+    fte->pinned = false;  // 기본적으로 핀 False 처리 (교체)
     ASSERT(!lock_held_by_current_thread(&frame_lock));
 
     lock_acquire(&frame_lock);
@@ -185,7 +185,7 @@ static struct frame_table_entry *frame_table_find_victim(void)
     /* Not Reached : 두 바퀴 순회에도 적절한 프레임을 찾지 못한 경우는 발생하지 않음 */
 }
 
-void frame_table_find_entry_delete(struct thread* owner)
+void frame_table_all_frame_owner(struct thread* owner)
 {
     struct frame_table_entry *fte;
     struct list_elem *e;
@@ -197,6 +197,8 @@ void frame_table_find_entry_delete(struct thread* owner)
         if (fte->owner == owner)
         {
             e = list_remove(e);
+            pagedir_clear_page(owner->pagedir, fte->upage);
+            palloc_free_page(fte->frame);
             free(fte);
         }
         else {

@@ -50,7 +50,7 @@ void spt_destructor(struct hash_elem *e, void *aux UNUSED)
             ASSERT(pagedir != NULL);
             frame_pin(pagedir_get_page(pagedir, entry->upage));
         }
-        if(entry->status == PAGE_SWAP) {
+        else if(entry->status == PAGE_SWAP) {
             swap_free_slot(entry->swap_index);
         }
     }
@@ -103,10 +103,10 @@ void spt_remove_page(struct hash *spt, void *upage)
         {
             if (entry->status == PAGE_PRESENT)
             {
-                frame_table_find_entry_delete(pagedir_get_page(pagedir, entry->upage));
+                pagedir_clear_page(pagedir, upage);
+                frame_deallocate(pagedir_get_page(pagedir, entry->upage));
             }
         }
-        frame_table_find_entry_delete(entry->upage);
         free(entry);
     }
          
