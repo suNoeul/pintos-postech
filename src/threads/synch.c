@@ -211,7 +211,7 @@ void lock_acquire(struct lock *lock)
 
   sema_down(&lock->semaphore);
   if (lock == &frame_lock)
-    printf("earning frame\n");
+    printf("earning frame<%x>\n", cur);
 
   cur->waiting_lock = NULL;
   lock->holder = cur;
@@ -252,7 +252,7 @@ void lock_release(struct lock *lock)
   lock->holder = NULL;
   sema_up(&lock->semaphore);
   if (lock == &frame_lock)
-    printf("release frame\n");
+    printf("release frame<%x>\n", thread_current());
 }
 
 /* Returns true if the current thread holds LOCK, false
