@@ -193,10 +193,16 @@ void frame_table_all_frame_owner(struct thread* owner)
     lock_acquire(&frame_lock);
     for (e = list_begin(&frame_table); e != list_end(&frame_table);)
     {
+        ASSERT(fte != NULL);
+        ASSERT(fte->owner != NULL);
+        ASSERT(fte->frame != NULL);
+        ASSERT(fte->upage != NULL);
         fte = list_entry(e, struct frame_table_entry, elem);
         if (fte->owner == owner)
         {
+            ASSERT(owner->pagedir != NULL);
             e = list_remove(e);
+            
             pagedir_clear_page(owner->pagedir, fte->upage);
             palloc_free_page(fte->frame);
             free(fte);
