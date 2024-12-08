@@ -241,7 +241,6 @@ void process_exit(void)
     munmap(i);
 
   /* Project3 */
-  lock_acquire(&frame_lock);
   spt_destroy(&cur->spt);
   
   /* Destroy the current process's page directory and switch back
@@ -260,7 +259,6 @@ void process_exit(void)
     pagedir_activate(NULL);
     pagedir_destroy(pd);
   }
-  lock_release(&frame_lock);
 
   /*oom*/
   for (int i = 2; i < 126; i++)

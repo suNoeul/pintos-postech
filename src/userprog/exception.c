@@ -173,13 +173,11 @@ static void page_fault(struct intr_frame *f)
    struct spt_entry *entry = spt_find_page(&cur->spt, fault_addr);
    if (entry == NULL)
    {
-      printf("<%x>ddudu\n", fault_addr);
       if (is_stack_access(esp, fault_addr))
          entry = grow_stack(esp, fault_addr, cur);
       else 
          exit(-101);
    }
-   printf("<%x>normal", fault_addr);
    void *kpage = frame_allocate(PAL_USER, upage);
    page_load(entry, kpage);
    map_page(entry, upage, kpage, cur);
@@ -197,7 +195,6 @@ bool is_stack_access(void *esp, void *fault_addr)
    // fault_addr가 스택 영역 내에 있는지 확인
    if (fault_addr < PHYS_BASE - MAX_STACK_SIZE || fault_addr >= PHYS_BASE)
    {
-      printf("dududu\n");
       return false;
    }
 
