@@ -41,7 +41,9 @@ void *frame_allocate(enum palloc_flags flags, void *upage)
     else 
     { // Frame allocation 실패 시, Evict Frame 호출       
         if (!frame_evict()) // Eviction도 실패한 경우 NULL 반환
+        {
             ASSERT(false);
+        }
         frame = palloc_get_page(flags);
         ASSERT(frame_table_add_entry(frame, upage));
     }
