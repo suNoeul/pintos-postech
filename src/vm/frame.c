@@ -50,6 +50,7 @@ void frame_deallocate(void *frame)
 {
     struct frame_table_entry *fte;
     struct list_elem *e;
+    ASSERT(!lock_held_by_current_thread(&frame_lock));
 
     lock_acquire(&frame_lock);
     for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))    {
@@ -85,6 +86,7 @@ static bool frame_table_add_entry(void *frame, void *upage)
     fte->upage = upage;
     fte->owner = thread_current();
     fte->pinned = false;  // 기본적으로 핀 False 처리 (교체 방지)
+    ASSERT(!lock_held_by_current_thread(&frame_lock));
 
     lock_acquire(&frame_lock);
     list_push_back(&frame_table, &fte->elem);
@@ -99,6 +101,7 @@ static struct frame_table_entry *frame_table_find_victim(void)
     struct list_elem *start = hand;          // 순회의 시작점을 저장
     struct frame_table_entry *current_entry;
     bool accessed, dirty;
+    ASSERT(!lock_held_by_current_thread(&frame_lock));
 
     lock_acquire(&frame_lock); // frame_table 보호를 위해 lock 설정
     
@@ -186,6 +189,7 @@ void frame_table_find_entry_delete(struct thread* owner)
 {
     struct frame_table_entry *fte;
     struct list_elem *e;
+    ASSERT(!lock_held_by_current_thread(&frame_lock));
     lock_acquire(&frame_lock);
     for (e = list_begin(&frame_table); e != list_end(&frame_table);)
     {
@@ -229,6 +233,7 @@ struct frame_table_entry* frame_find_entry(void * kpage) {
     struct frame_table_entry *fte;
     struct list_elem *e;
     bool success = false;
+    ASSERT(!lock_held_by_current_thread(&frame_lock));
     lock_acquire(&frame_lock);
     for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))
     {
