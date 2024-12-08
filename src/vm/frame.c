@@ -116,13 +116,7 @@ static struct frame_table_entry *frame_table_find_victim(void)
     { 
         if(hand == NULL)
         {
-            printf("cheum\n");
-            if (!list_empty(&frame_table))
-            {
-                hand = list_begin(&frame_table);
-            }
-            else
-                printf("what?\n");
+            hand = list_begin(&frame_table);
         }
             
         current_entry = list_entry(hand, struct frame_table_entry, elem);
@@ -171,7 +165,8 @@ static struct frame_table_entry *frame_table_find_victim(void)
         current_entry = list_entry(hand, struct frame_table_entry, elem);
 
         // pinned 여부를 확인하고, pinned된 경우 건너뜀
-        if (current_entry->pinned) {
+        if (current_entry->pinned || current_entry->owner->pagedir == NULL)
+        {
             hand = list_next(hand) == list_end(&frame_table) ? list_begin(&frame_table) : list_next(hand);
             continue;
         }
