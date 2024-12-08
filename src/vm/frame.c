@@ -62,8 +62,10 @@ void frame_deallocate(void *frame)
         }
     }
     lock_release(&frame_lock);
+    printf("duduA\n");
 
     palloc_free_page(frame); // 물리 메모리 반환
+    printf("duduA\n");
 }
 
 bool frame_evict(void) 
@@ -203,9 +205,7 @@ void frame_table_all_frame_owner(struct thread* owner)
             ASSERT(owner->pagedir != NULL);
             e = list_remove(e);
             pagedir_clear_page(owner->pagedir, fte->upage);
-            printf("dudu A\n");
             palloc_free_page(fte->frame);
-            printf("dudu B\n");
             free(fte);
         }
         else {
