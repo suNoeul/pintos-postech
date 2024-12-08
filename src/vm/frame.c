@@ -65,7 +65,7 @@ void frame_deallocate(void *frame)
     printf("duduA\n");
 
     palloc_free_page(frame); // 물리 메모리 반환
-    printf("duduA\n");
+    printf("duduB\n");
 }
 
 bool frame_evict(void) 
