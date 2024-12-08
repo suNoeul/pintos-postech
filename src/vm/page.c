@@ -24,7 +24,7 @@ void spt_destructor(struct hash_elem *e, void *aux UNUSED)
     uint32_t *pagedir = thread_current()->pagedir;
     if(entry) {
         if(entry->status == PAGE_PRESENT) {
-            frame_table_find_entry_delete(pagedir_get_page(pagedir, entry->upage));
+            remove_frame_entry(pagedir_get_page(pagedir, entry->upage));
         }
     }
     free(entry);
@@ -50,16 +50,14 @@ void spt_remove_page(struct hash *spt, void *upage)
     e = hash_delete(spt, &entry.hash_elem);
     
     if (e != NULL) {
-        struct spt_entry *entry = hash_entry(e, struct spt_entry, hash_elem);
+        struct spt_entry *removed_entry = hash_entry(e, struct spt_entry, hash_elem);
         uint32_t *pagedir = thread_current()->pagedir;
-        if (entry)
-        {
-            if (entry->status == PAGE_PRESENT)
-            {
-                frame_table_find_entry_delete(pagedir_get_page(pagedir, entry->upage));
-            }
-        }
-        free(entry);
+
+        if (removed_entry->status == PAGE_PRESENT)
+            frame_deallocate (pagedir_get_page(pagedir, removed_entry->upage));
+        
+        pagedir_clear_page(pagedir, removed_entry->upage);
+        free(removed_entry);
     }         
 }
 
@@ -88,17 +86,17 @@ bool spt_add_page(struct hash *spt, void *upage, struct file *file,
     if (entry == NULL)
         return false;
 
+    entry->status = status;
     entry->upage = upage;
     entry->file = file;
     entry->ofs = ofs;
     entry->page_read_bytes = page_read_bytes;
     entry->page_zero_bytes = page_zero_bytes;
-    entry->status = status;
-    entry->writable = writable;
     entry->swap_index = 0;
+    entry->writable = writable;
 
     struct hash_elem *result = hash_insert(spt, &entry->hash_elem);
-    return result == NULL; // NULL 반환 시 성공적으로 삽입된 것
+    return result == NULL; // NULL means SUCCESS
 }
 
 unsigned spt_hash_func(const struct hash_elem *e, void *aux)
@@ -134,13 +132,13 @@ void mmt_destructor(struct hash_elem *e, void *aux UNUSED)
     {
         if (entry->status == PAGE_PRESENT)
         {
-            frame_table_find_entry_delete(pagedir_get_page(pagedir, entry->upage));
+            remove_frame_entry(pagedir_get_page(pagedir, entry->upage));
         }
     }
     free(entry);
 }
 
-struct mmt_entry *mmt_find_entry(struct hash *mmt, mapid_t *mmap_id)
+struct mmt_entry *mmt_find_entry(struct hash *mmt, mapid_t mmap_id)
 {
     struct mmt_entry entry;
     struct hash_elem *e;

@@ -334,12 +334,10 @@ void munmap(mapid_t mapping)
 
   lock_acquire(&file_lock);
   off_t size = file_length(entry->file);
-  for (ofs = 0; ofs < size; ofs += PGSIZE)
-  {
+  for (ofs = 0; ofs < size; ofs += PGSIZE) {
     spte = spt_find_entry(&cur->spt, upage);
     //dirty인 경우 WB
-    if (pagedir_is_dirty(cur->pagedir, upage))
-    {
+    if (pagedir_is_dirty(cur->pagedir, upage)) {
       void *kpage = pagedir_get_page(cur->pagedir, upage);
       file_write_at(spte->file, kpage, spte-> page_read_bytes, spte->ofs);
     }

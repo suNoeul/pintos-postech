@@ -13,8 +13,8 @@
 
 struct spt_entry{
     int status;                 
-    bool writable;           
     void *upage;                
+    bool writable;           
     
     /* for PAGE_FILE */
     struct file *file;          // Excute file pointer
@@ -61,7 +61,7 @@ void mmt_destroy(struct hash *mmt);
 void mmt_destructor(struct hash_elem *e, void *aux UNUSED);
 
 /* func of manage MMT entry */
-struct mmt_entry *mmt_find_entry(struct hash *mmt, mapid_t *mmap_id);
+struct mmt_entry *mmt_find_entry(struct hash *mmt, mapid_t mmap_id);
 bool mmt_add_page(struct hash *mmt, mapid_t id, struct file *file, void *upage);
 
 /* File MMT entry hash func */

@@ -46,11 +46,11 @@ void *frame_allocate(enum palloc_flags flags, void *upage)
 
 void frame_deallocate(void *frame)
 {
-    frame_table_find_entry_delete(frame);
+    remove_frame_entry(frame);
     palloc_free_page(frame); 
 }
 
-bool frame_table_find_entry_delete(void *frame)
+bool remove_frame_entry(void *frame)
 {
     struct frame_table_entry *fte;
     struct list_elem *e;
