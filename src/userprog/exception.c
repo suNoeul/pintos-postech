@@ -167,7 +167,13 @@ static void page_fault(struct intr_frame *f)
    
 
    if (is_kernel_vaddr(fault_addr) || !not_present)
+   {
+      if (lock_held_by_current_thread(&frame_lock))
+      {
+         lock_release(&frame_lock);
+      }
       exit(-1);
+   }
    lock_acquire(&frame_lock);
 
    struct spt_entry *entry = spt_find_page(&cur->spt, fault_addr);

@@ -243,7 +243,6 @@ void process_exit(void)
     lock_release(&file_lock);
   if (lock_held_by_current_thread(&frame_lock))
     lock_release(&frame_lock);
-
   /* Project3 */
   spt_destroy(&cur->spt);
   
@@ -486,8 +485,10 @@ static bool setup_stack(void **esp)
   lock_acquire(&frame_lock);
   uint8_t *kpage = frame_allocate(PAL_USER | PAL_ZERO, (uint8_t *)PHYS_BASE - PGSIZE);
 
-  if (!kpage)
+  if (!kpage) {
+    lock_release(&frame_lock);
     return false;
+  }
   
   if(!install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true)){
     lock_release(&frame_lock);
@@ -502,7 +503,6 @@ static bool setup_stack(void **esp)
     install_page(((uint8_t *)PHYS_BASE) - PGSIZE, NULL, false); // Rollback SPT when fail
     lock_release(&frame_lock);
     frame_deallocate(kpage);
-    
     return false;
   }
 
