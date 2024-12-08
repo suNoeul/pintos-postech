@@ -16,7 +16,7 @@ struct frame_table_entry
 
 struct list frame_table;
 struct lock frame_lock;
-struct list_elem *hand = NULL; // frame_table 순회를 위한 커서
+struct list_elem *hand; // frame_table 순회를 위한 커서
 
 void frame_table_init(void);
 void *frame_allocate(enum palloc_flags flags, void *upage);
