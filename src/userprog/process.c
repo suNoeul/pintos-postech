@@ -241,7 +241,9 @@ void process_exit(void)
     munmap(i);
 
   /* Project3 */
+  lock_acquire(&frame_lock);
   spt_destroy(&cur->spt);
+  lock_release(&frame_lock);
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
