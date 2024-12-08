@@ -101,7 +101,7 @@ bool pagedir_set_page (uint32_t *pd, void *upage, void *kpage, bool writable)
   ASSERT (is_user_vaddr (upage));
   ASSERT (vtop (kpage) >> PTSHIFT < init_ram_pages);
   ASSERT (pd != init_page_dir);
-
+  printf("dudu_set\n");
   pte = lookup_page (pd, upage, true);
 
   if (pte != NULL) 
@@ -123,7 +123,7 @@ void * pagedir_get_page (uint32_t *pd, const void *uaddr)
   uint32_t *pte;
 
   ASSERT (is_user_vaddr (uaddr));
-  
+  printf("dudu_get\n");
   pte = lookup_page (pd, uaddr, false);
   if (pte != NULL && (*pte & PTE_P) != 0)
     return pte_get_page (*pte) + pg_ofs (uaddr);
@@ -141,7 +141,7 @@ void pagedir_clear_page (uint32_t *pd, void *upage)
 
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (is_user_vaddr (upage));
-
+  printf("dudu_clear\n");
   pte = lookup_page (pd, upage, false);
   if (pte != NULL && (*pte & PTE_P) != 0)
     {
@@ -156,6 +156,7 @@ void pagedir_clear_page (uint32_t *pd, void *upage)
    Returns false if PD contains no PTE for VPAGE. */
 bool pagedir_is_dirty (uint32_t *pd, const void *vpage) 
 {
+  printf("dudu_dir\n");
   uint32_t *pte = lookup_page (pd, vpage, false);
   return pte != NULL && (*pte & PTE_D) != 0;
 }
@@ -164,6 +165,7 @@ bool pagedir_is_dirty (uint32_t *pd, const void *vpage)
    in PD. */
 void pagedir_set_dirty (uint32_t *pd, const void *vpage, bool dirty) 
 {
+  printf("dudu_setdirty\n");
   uint32_t *pte = lookup_page (pd, vpage, false);
   if (pte != NULL) 
     {
@@ -183,6 +185,7 @@ void pagedir_set_dirty (uint32_t *pd, const void *vpage, bool dirty)
    PD contains no PTE for VPAGE. */
 bool pagedir_is_accessed (uint32_t *pd, const void *vpage) 
 {
+  printf("dudu_ac\n");
   uint32_t *pte = lookup_page (pd, vpage, false);
   return pte != NULL && (*pte & PTE_A) != 0;
 }
@@ -191,6 +194,7 @@ bool pagedir_is_accessed (uint32_t *pd, const void *vpage)
    VPAGE in PD. */
 void pagedir_set_accessed (uint32_t *pd, const void *vpage, bool accessed) 
 {
+  printf("dudu_setac\n");
   uint32_t *pte = lookup_page (pd, vpage, false);
   if (pte != NULL) 
     {
