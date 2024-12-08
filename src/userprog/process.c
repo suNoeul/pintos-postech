@@ -268,9 +268,7 @@ void process_exit(void)
   }
 
   palloc_free_page(cur->fd_table);
-  lock_acquire(&file_lock);
   file_close(cur->excute_file_name);
-  lock_release(&file_lock);
 
   /* sema control for parent, child */
   sema_up(&cur->wait_sys);   // wake a Parent up
