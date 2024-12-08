@@ -171,6 +171,7 @@ static void page_fault(struct intr_frame *f)
    struct spt_entry *entry = spt_find_page(&cur->spt, fault_addr);
    if (entry == NULL)
    {
+      printf("<%x>ddudu", fault_addr);
       if (is_stack_access(esp, fault_addr))
          entry = grow_stack(esp, fault_addr, cur);
       else
