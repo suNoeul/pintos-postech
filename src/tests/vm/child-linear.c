@@ -22,7 +22,6 @@ main (int argc, char *argv[])
 
   /* Encrypt zeros. */
   arc4_init (&arc4, key, strlen (key));
-  msg("dudu4");
   arc4_crypt (&arc4, buf, SIZE);
   msg("dudu6");
 
