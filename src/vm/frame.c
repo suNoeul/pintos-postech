@@ -60,13 +60,12 @@ void frame_deallocate(void *frame)
         fte = list_entry(e, struct frame_table_entry, elem);
         if (fte->frame == frame) {
             list_remove(e); // Frame Table에서 제거
+            palloc_free_page(frame); // 물리 메모리 반환
             free(fte);      // Frame Table Entry 해제
             break;
         }
     }
     lock_release(&frame_lock);
-
-    palloc_free_page(frame); // 물리 메모리 반환
 }
 
 bool frame_evict(void) 
