@@ -184,26 +184,24 @@ static struct frame_table_entry *frame_table_find_victim(void)
     /* Not Reached : 두 바퀴 순회에도 적절한 프레임을 찾지 못한 경우는 발생하지 않음 */
 }
 
-bool frame_table_find_entry_delete(void *kpage)
+void frame_table_find_entry_delete(struct thread* owner)
 {
     struct frame_table_entry *fte;
     struct list_elem *e;
-    bool success = false;
     lock_acquire(&frame_lock);
     for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))
     {
         fte = list_entry(e, struct frame_table_entry, elem);
-        if (fte->frame == kpage)
+        if (fte->owner == owner)
         {
-            success = true;
             list_remove(e);
             free(fte);
-            break;
+        }
+        else {
+            e = list_next(e);
         }
     }
     lock_release(&frame_lock);
-
-    return success;
 }
 
 static bool swap_out_evicted_page (struct frame_table_entry *victim_entry)
@@ -227,4 +225,32 @@ static bool swap_out_evicted_page (struct frame_table_entry *victim_entry)
     pagedir_clear_page(owner->pagedir, upage);
     frame_deallocate(frame);
     return true;
+}
+
+struct frame_table_entry* frame_find_entry(void * kpage) {
+    struct frame_table_entry *fte;
+    struct list_elem *e;
+    bool success = false;
+    lock_acquire(&frame_lock);
+    for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))
+    {
+        fte = list_entry(e, struct frame_table_entry, elem);
+        if (fte->frame == kpage)
+        {
+            lock_release(&frame_lock);
+            return fte;
+        }
+    }
+    lock_release(&frame_lock);
+    return NULL;
+}
+
+void frame_pin(void *frame) {
+    struct frame_table_entry *entry = frame_find_entry(frame);
+    entry->pinned = true;
+}
+
+void frame_unpin(void *frame) {
+    struct frame_table_entry *entry = frame_find_entry(frame);
+    entry->pinned = false;
 }

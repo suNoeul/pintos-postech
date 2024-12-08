@@ -6,6 +6,7 @@
 #include "filesys/file.h"
 #include "lib/user/syscall.h"
 #include "vm/frame.h"
+#include "vm/swap.h"
 
 void spt_init(struct hash *spt)
 {
@@ -47,7 +48,10 @@ void spt_destructor(struct hash_elem *e, void *aux UNUSED)
     if(entry) {
         if(entry->status == PAGE_PRESENT) {
             ASSERT(pagedir != NULL);
-            frame_table_find_entry_delete(pagedir_get_page(pagedir, entry->upage));
+            frame_pin(pagedir_get_page(pagedir, entry->upage));
+        }
+        if(entry->status == PAGE_SWAP) {
+            swap_free_slot(entry->swap_index);
         }
     }
     free(entry);
@@ -62,7 +66,11 @@ void mmt_destructor(struct hash_elem *e, void *aux UNUSED)
         if (entry->status == PAGE_PRESENT)
         {
             ASSERT(pagedir != NULL);
-            frame_table_find_entry_delete(pagedir_get_page(pagedir, entry->upage));
+            frame_pin(pagedir_get_page(pagedir, entry->upage));
+        }
+        if (entry->status == PAGE_SWAP)
+        {
+            swap_free_slot(entry->swap_index);
         }
     }
     free(entry);

@@ -257,6 +257,7 @@ void process_exit(void)
        that's been freed (and cleared). */
     cur->pagedir = NULL;
     pagedir_activate(NULL);
+    frame_table_find_entry_delete(cur);
     pagedir_destroy(pd);
   }
   lock_release(&frame_lock);
@@ -269,7 +270,9 @@ void process_exit(void)
   }
 
   palloc_free_page(cur->fd_table);
+  lock_acquire(&file_lock);
   file_close(cur->excute_file_name);
+  lock_release(&file_lock);
 
   /* sema control for parent, child */
   sema_up(&cur->wait_sys);   // wake a Parent up
