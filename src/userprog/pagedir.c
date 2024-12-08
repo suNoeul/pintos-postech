@@ -101,7 +101,7 @@ bool pagedir_set_page (uint32_t *pd, void *upage, void *kpage, bool writable)
   ASSERT (is_user_vaddr (upage));
   ASSERT (vtop (kpage) >> PTSHIFT < init_ram_pages);
   ASSERT (pd != init_page_dir);
-  printf("dudu_set\n");
+
   pte = lookup_page (pd, upage, true);
 
   if (pte != NULL) 
@@ -123,7 +123,7 @@ void * pagedir_get_page (uint32_t *pd, const void *uaddr)
   uint32_t *pte;
 
   ASSERT (is_user_vaddr (uaddr));
-  printf("dudu_get\n");
+  
   pte = lookup_page (pd, uaddr, false);
   if (pte != NULL && (*pte & PTE_P) != 0)
     return pte_get_page (*pte) + pg_ofs (uaddr);
@@ -141,6 +141,7 @@ void pagedir_clear_page (uint32_t *pd, void *upage)
 
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (is_user_vaddr (upage));
+
   pte = lookup_page (pd, upage, false);
   if (pte != NULL && (*pte & PTE_P) != 0)
     {
