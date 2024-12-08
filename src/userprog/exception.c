@@ -178,6 +178,7 @@ static void page_fault(struct intr_frame *f)
       }
       else {
          printf("<%d>dudu2\n", entry->upage);
+         
          exit(-101);
       }
    }
