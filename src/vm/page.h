@@ -12,14 +12,18 @@
 #define PAGE_ZERO 4    // 0으로 초기화된 페이지
 
 struct spt_entry{
-    void *upage;                // User Virtual Address
+    int status;                 
+    bool writable;           
+    void *upage;                
+    
+    /* for PAGE_FILE */
     struct file *file;          // Excute file pointer
     off_t ofs;                  // File offset
     size_t page_read_bytes;     // 파일에서 읽어야 할 바이트 수
     size_t page_zero_bytes;     // 0으로 초기화할 바이트 수
-    bool writable;              // 페이지 쓰기 가능 여부
-    int status;                 
-    size_t swap_index;          //평상시에는 사용안되다가 PAGE_SWAP status에서만 사용됨.
+    
+    /* for PAGE_SWAP */
+    size_t swap_index;          
 
     struct hash_elem hash_elem;
 };
