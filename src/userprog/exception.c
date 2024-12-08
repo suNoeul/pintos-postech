@@ -186,12 +186,14 @@ bool is_stack_access(void *esp, void *fault_addr)
    // 유효한 사용자 주소인지 확인
    if (!is_user_vaddr(fault_addr))
    {
+      printf("dududu2\n");
       return false;
    }
 
    // fault_addr가 스택 영역 내에 있는지 확인
    if (fault_addr <= PHYS_BASE - MAX_STACK_SIZE || fault_addr >= PHYS_BASE)
    {
+      printf("dududu1\n");
       return false;
    }
 
