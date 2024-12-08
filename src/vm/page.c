@@ -166,7 +166,7 @@ struct mmt_entry *mmt_find_entry(struct hash *mmt, mapid_t *mmap_id)
 
 bool mmt_add_page(struct hash* mmt, mapid_t id, struct file *file, void *upage)
 {
-    struct mmt_entry *entry = (struct mmt_entry *)malloc(sizeof *entry);
+    struct mmt_entry *entry = malloc(sizeof (struct mmt_entry));
     entry->mmap_id = id;
     entry->file = file;
     entry->upage = upage;

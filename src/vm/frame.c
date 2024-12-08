@@ -205,9 +205,7 @@ void frame_table_all_frame_owner(struct thread* owner)
             ASSERT(owner->pagedir != NULL);
             e = list_remove(e);
             pagedir_clear_page(owner->pagedir, fte->upage);
-            printf("duduA\n");
             palloc_free_page(fte->frame);
-            printf("duduB\n");
             free(fte);
         }
         else {
