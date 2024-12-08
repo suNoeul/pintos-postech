@@ -242,8 +242,23 @@ static bool swap_out_evicted_page (struct frame_table_entry *victim_entry)
     spte->swap_index = swap_index; // 스왑 인덱스 저장
 
     pagedir_clear_page(owner->pagedir, upage);
+    struct frame_table_entry *fte;
+    struct list_elem *e;
+    for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))
+    {
+        fte = list_entry(e, struct frame_table_entry, elem);
+        if (fte->frame == frame)
+        {
+            if (e == hand)
+                hand = list_remove(e); // Frame Table에서 제거
+            else
+                list_remove(e);
+            palloc_free_page(frame); // 물리 메모리 반환
+            free(fte);               // Frame Table Entry 해제
+            break;
+        }
+    }
     lock_release(&frame_lock);
-    frame_deallocate(frame);
     return true;
 }
 
