@@ -512,7 +512,7 @@ static bool setup_stack(void **esp)
   }
 
   *esp = PHYS_BASE;
-
+  printf("dudu122du\n");
   lock_release(&frame_lock);
   return true;
 }
