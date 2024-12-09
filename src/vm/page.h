@@ -12,23 +12,19 @@
 #define PAGE_ZERO 4    // 0으로 초기화된 페이지
 
 struct spt_entry{
-    void *upage;                // User Virtual Address
+    int status;                 
+    void *upage;                
+    bool writable;           
+    
+    /* for PAGE_FILE */
     struct file *file;          // Excute file pointer
     off_t ofs;                  // File offset
     size_t page_read_bytes;     // 파일에서 읽어야 할 바이트 수
     size_t page_zero_bytes;     // 0으로 초기화할 바이트 수
-    bool writable;              // 페이지 쓰기 가능 여부
-    int status;                 
-    struct hash_elem hash_elem;
-    size_t swap_index;          //평상시에는 사용안되다가 PAGE_SWAP status에서만 사용됨.
-};
+    
+    /* for PAGE_SWAP */
+    size_t swap_index;          
 
-struct mmt_entry
-{
-    /* mmap 관련 멤버 */
-    struct file *file;  // Excute file pointer
-    void *upage;        // User Virtual Address
-    mapid_t mmap_id;    // mmap 호출과 연결된 ID
     struct hash_elem hash_elem;
 };
 
@@ -48,13 +44,28 @@ bool spt_add_page(struct hash *spt, void *upage, struct file *file,
 unsigned spt_hash_func(const struct hash_elem *e, void *aux);
 bool spt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux);
 
+struct mmt_entry
+{
+    /* mmap 관련 멤버 */
+    struct file *file;  // Excute file pointer
+    void *upage;        // User Virtual Address
+    mapid_t mmap_id;    // mmap 호출과 연결된 ID
+    
+    struct hash_elem hash_elem;
+};
+
+/* init & management spt func */
 void mmt_init(struct hash *mmt);
-unsigned mmt_hash_func(const struct hash_elem *e, void *aux);
-bool mmt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux);
+void mmt_destroy(struct hash *mmt);
+void mmt_destructor(struct hash_elem *e, void *aux UNUSED);
+
+/* func of manage MMT entry */
 struct mmt_entry *mmt_find_entry(struct hash *mmt, mapid_t *mmap_id);
 bool mmt_add_page(struct hash *mmt, mapid_t id, struct file *file, void *upage);
 
-void mmt_destroy(struct hash *mmt);
-void mmt_destructor(struct hash_elem *e, void *aux UNUSED);
+/* File MMT entry hash func */
+unsigned mmt_hash_func(const struct hash_elem *e, void *aux);
+bool mmt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux);
+
 
 #endif /* PAGE_H */

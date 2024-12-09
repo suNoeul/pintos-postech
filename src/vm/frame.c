@@ -7,14 +7,10 @@
 #include "threads/thread.h"
 #include <stdio.h>
 
-
-
-
 /* functionality to manage frame_table */
 static bool frame_table_add_entry (void *frame, void *upage);
 static struct frame_table_entry *frame_table_find_victim (void);
 static bool swap_out_evicted_page (struct frame_table_entry *victim_entry);
-
 
 
 void frame_table_init(void)
@@ -187,35 +183,6 @@ static struct frame_table_entry *frame_table_find_victim(void)
     /* Not Reached : 두 바퀴 순회에도 적절한 프레임을 찾지 못한 경우는 발생하지 않음 */
 }
 
-void frame_table_all_frame_owner(struct thread* owner)
-{
-    struct frame_table_entry *fte;
-    struct list_elem *e;
-    ASSERT(!lock_held_by_current_thread(&frame_lock));
-    lock_acquire(&frame_lock);
-    for (e = list_begin(&frame_table); e != list_end(&frame_table);)
-    {
-        ASSERT(fte != NULL);
-        ASSERT(fte->owner != NULL);
-        ASSERT(fte->frame != NULL);
-        ASSERT(fte->upage != NULL);
-        fte = list_entry(e, struct frame_table_entry, elem);
-        if (fte->owner == owner)
-        {
-            ASSERT(owner->pagedir != NULL);
-            e = list_remove(e);
-            pagedir_clear_page(owner->pagedir, fte->upage);
-            palloc_free_page(fte->frame);
-            free(fte);
-        }
-        else {
-            e = list_next(e);
-        }
-    }
-
-    lock_release(&frame_lock);
-}
-
 static bool swap_out_evicted_page (struct frame_table_entry *victim_entry)
 {
     ASSERT(victim_entry != NULL)
@@ -252,35 +219,4 @@ static bool swap_out_evicted_page (struct frame_table_entry *victim_entry)
         }
     }
     return true;
-}
-
-struct frame_table_entry* frame_find_entry(void * kpage) {
-    struct frame_table_entry *fte;
-    struct list_elem *e;
-    bool success = false;
-    ASSERT(!lock_held_by_current_thread(&frame_lock));
-    lock_acquire(&frame_lock);
-    for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))
-    {
-        fte = list_entry(e, struct frame_table_entry, elem);
-        if (fte->frame == kpage)
-        {
-
-            lock_release(&frame_lock);
-            return fte;
-        }
-    }
-
-    lock_release(&frame_lock);
-    return NULL;
-}
-
-void frame_pin(void *frame) {
-    struct frame_table_entry *entry = frame_find_entry(frame);
-    entry->pinned = true;
-}
-
-void frame_unpin(void *frame) {
-    struct frame_table_entry *entry = frame_find_entry(frame);
-    entry->pinned = false;
 }
