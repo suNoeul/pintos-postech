@@ -172,7 +172,7 @@ static void page_fault(struct intr_frame *f)
       {
          lock_release(&frame_lock);
       }
-      exit(-1);
+      exit(-20);
    }
    lock_acquire(&frame_lock);
 
@@ -184,7 +184,7 @@ static void page_fault(struct intr_frame *f)
       else
       {
          lock_release(&frame_lock);
-         exit(-1);
+         exit(-91);
       }     
    }
    void *kpage = frame_allocate(PAL_USER, upage);
