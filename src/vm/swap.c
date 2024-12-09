@@ -74,11 +74,3 @@ void swap_free_slot(size_t swap_index)
     bitmap_set(swap_table.used_slots, swap_index, false);
     swap_table.slot_count++;
 }
-
-// bool swap_is_slot_in_use(size_t swap_index)
-// {
-//     ASSERT(swap_index < bitmap_size(swap_table.used_slots));
-
-//     /* 해당 Swap Slot의 사용 여부 반환 */
-//     return bitmap_test(swap_table.used_slots, swap_index);
-// }
