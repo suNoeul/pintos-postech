@@ -106,8 +106,6 @@ static struct frame_table_entry *frame_table_find_victim(void)
     struct list_elem *start = hand;          // 순회의 시작점을 저장
     struct frame_table_entry *current_entry;
     bool accessed, dirty;
-
-    
     
     do /* 첫 번째 순회 */
     { 
