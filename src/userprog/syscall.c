@@ -61,6 +61,7 @@ static void syscall_handler(struct intr_frame *f)
       break;
     case SYS_OPEN:
       f->eax = open(*(const char **)(f->esp + 4));
+      printf("dudufile:<%x>", f->eax);
       break;
     case SYS_FILESIZE:
       check_address(f->esp + 4);
@@ -173,7 +174,6 @@ bool remove(const char *file)
 int open(const char *file)
 {
   check_address(file);
-  printf("dudufile:<%s>", file);
 
   lock_acquire(&file_lock);
   struct file *f = filesys_open(file);
