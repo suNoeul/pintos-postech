@@ -236,17 +236,15 @@ void process_exit(void)
   struct thread *cur = thread_current();
   uint32_t *pd;
   
-
-  for (int i = 0; i < cur->mapid; i++)
-    munmap(i);
+  // file lock release check
   if (lock_held_by_current_thread(&file_lock))
     lock_release(&file_lock);
   if (lock_held_by_current_thread(&frame_lock))
-  {
     lock_release(&frame_lock);
-  }
-    
+
   /* Project3 */
+  for (int i = 0; i < cur->mapid; i++)
+    munmap(i);      
   spt_destroy(&cur->spt);
   
   /* Destroy the current process's page directory and switch back

@@ -27,23 +27,8 @@ void spt_destructor(struct hash_elem *e, void *aux UNUSED)
         if(entry->status == PAGE_PRESENT) {
             ASSERT(pagedir != NULL);
             void *frame = pagedir_get_page(pagedir, entry->upage);
-            struct frame_table_entry *fte;
-            struct list_elem *e;
-            for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))
-            {
-                fte = list_entry(e, struct frame_table_entry, elem);
-                if (fte->frame == frame)
-                {
-                    if(e == hand)
-                        hand = list_remove(e);      // Frame Table에서 제거
-                    else
-                        list_remove(e);
-                    palloc_free_page(frame); // 물리 메모리 반환
-                    pagedir_clear_page(pagedir, entry->upage);
-                    free(fte);               // Frame Table Entry 해제
-                    break;
-                }
-            }
+            frame_deallocate(frame);
+            pagedir_clear_page(pagedir, entry->upage);
         }
         else if(entry->status == PAGE_SWAP) {
             ASSERT(entry->swap_index != -1);
