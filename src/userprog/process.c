@@ -487,6 +487,7 @@ done:
 static bool setup_stack(void **esp)
 {
   lock_acquire(&frame_lock);
+  printf("dududu\n");
   uint8_t *kpage = frame_allocate(PAL_USER | PAL_ZERO, (uint8_t *)PHYS_BASE - PGSIZE);
 
   if (!kpage) {
