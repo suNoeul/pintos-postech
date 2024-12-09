@@ -484,6 +484,7 @@ done:
 /* Create a minimal stack by mapping a zeroed page at the top of user virtual memory. */
 static bool setup_stack(void **esp)
 {
+  printf("dududsdsu\n");
   lock_acquire(&frame_lock);
   printf("dududu\n");
   uint8_t *kpage = frame_allocate(PAL_USER | PAL_ZERO, (uint8_t *)PHYS_BASE - PGSIZE);
