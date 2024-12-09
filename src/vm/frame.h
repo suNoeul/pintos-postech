@@ -22,6 +22,5 @@ void *frame_allocate(enum palloc_flags flags, void *upage);
 void frame_deallocate(void *frame);
 bool remove_frame_entry(void *frame);
 bool frame_evict(void);
-struct frame_table_entry *frame_find_entry(void *frame);
 
 #endif /* FRAME_H */
