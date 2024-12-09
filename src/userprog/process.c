@@ -504,11 +504,11 @@ static bool setup_stack(void **esp)
   struct thread *cur = thread_current();
   if (!spt_add_page(&cur->spt, ((uint8_t *)PHYS_BASE) - PGSIZE, NULL, 0, 0, PGSIZE, true, PAGE_PRESENT)){
     install_page(((uint8_t *)PHYS_BASE) - PGSIZE, NULL, false); // Rollback SPT when fail
-
     lock_release(&frame_lock);
     frame_deallocate(kpage);
     return false;
   }
+  printf("setup complete<%x>\n", cur);
 
   *esp = PHYS_BASE;
   lock_release(&frame_lock);

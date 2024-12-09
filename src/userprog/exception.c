@@ -162,9 +162,9 @@ static void page_fault(struct intr_frame *f)
          조건 : NULL이거나, is_kernel_vaddr()이거나 spt에도 없는 경우(is_exist_spt(adrr))
    */
    struct thread *cur = thread_current();
-   void *esp = user ? f->esp : cur->esp; 
+   void *esp = user ? f->esp : cur->esp;
    void *upage = pg_round_down(fault_addr);
-   
+   printf("page_fault <%x>\n", cur);
 
    if (is_kernel_vaddr(fault_addr) || !not_present)
    {
