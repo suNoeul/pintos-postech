@@ -137,6 +137,7 @@ void * pagedir_get_page (uint32_t *pd, const void *uaddr)
    UPAGE need not be mapped. */
 void pagedir_clear_page (uint32_t *pd, void *upage) 
 {
+  ASSERT(pd != NULL);
   uint32_t *pte;
 
   ASSERT (pg_ofs (upage) == 0);

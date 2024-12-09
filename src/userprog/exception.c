@@ -166,7 +166,14 @@ static void page_fault(struct intr_frame *f)
    void *upage = pg_round_down(fault_addr);
 
    if (is_kernel_vaddr(fault_addr) || !not_present)
-      exit(-1);   
+   {
+      if (lock_held_by_current_thread(&frame_lock))
+      {
+         lock_release(&frame_lock);
+      }
+      exit(-1);
+   }
+   lock_acquire(&frame_lock);
 
    struct spt_entry *entry = spt_find_page(&cur->spt, fault_addr);
    if (entry == NULL)
@@ -174,11 +181,18 @@ static void page_fault(struct intr_frame *f)
       if (is_stack_access(esp, fault_addr))
          entry = grow_stack(esp, fault_addr, cur);
       else
+      {
+         lock_release(&frame_lock);
          exit(-1);
+      }     
    }
    void *kpage = frame_allocate(PAL_USER, upage);
    page_load(entry, kpage);
    map_page(entry, upage, kpage, cur);
+   if(lock_held_by_current_thread(&frame_lock)) {
+      lock_release(&frame_lock);
+   }
+      
 }
 
 bool is_stack_access(void *esp, void *fault_addr)
@@ -190,7 +204,7 @@ bool is_stack_access(void *esp, void *fault_addr)
    }
 
    // fault_addr가 스택 영역 내에 있는지 확인
-   if (fault_addr <= PHYS_BASE - MAX_STACK_SIZE || fault_addr >= PHYS_BASE)
+   if (fault_addr < PHYS_BASE - MAX_STACK_SIZE || fault_addr >= PHYS_BASE)
    {
       return false;
    }

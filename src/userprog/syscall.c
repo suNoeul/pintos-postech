@@ -338,12 +338,19 @@ void munmap(mapid_t mapping)
   {
     spte = spt_find_page(&cur->spt, upage);
     //dirty인 경우 WB
+    void *kpage = pagedir_get_page(cur->pagedir, upage);
     if (pagedir_is_dirty(cur->pagedir, upage))
     {
-      void *kpage = pagedir_get_page(cur->pagedir, upage);
       file_write_at(spte->file, kpage, spte-> page_read_bytes, spte->ofs);
     }
+    uint32_t *pagedir = thread_current()->pagedir;
+    if (spte->status == PAGE_PRESENT)
+    {
+      pagedir_clear_page(pagedir, upage);
+      frame_deallocate(kpage);
+    }
     spt_remove_page(&cur->spt, spte->upage);
+    
     upage += PGSIZE;
   }
   hash_delete(&cur->mmt, &entry->hash_elem);

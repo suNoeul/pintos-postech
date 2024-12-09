@@ -235,13 +235,20 @@ void process_exit(void)
 {
   struct thread *cur = thread_current();
   uint32_t *pd;
+  
 
   for (int i = 0; i < cur->mapid; i++)
     munmap(i);
-
+  if (lock_held_by_current_thread(&file_lock))
+    lock_release(&file_lock);
+  if (lock_held_by_current_thread(&frame_lock))
+  {
+    lock_release(&frame_lock);
+  }
+    
   /* Project3 */
-  spt_destroy(&thread_current()->spt);
-
+  spt_destroy(&cur->spt);
+  
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -269,8 +276,8 @@ void process_exit(void)
   palloc_free_page(cur->fd_table);
   file_close(cur->excute_file_name);
 
-  /* sema control for parent, child */
-  sema_up(&cur->wait_sys);   // wake a Parent up
+        /* sema control for parent, child */
+  sema_up(&cur->wait_sys); // wake a Parent up
   sema_down(&cur->exit_sys); // wait for Parent signal
 }
 
@@ -378,6 +385,7 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
 
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create();
+  
   if (t->pagedir == NULL)
     goto done;
   process_activate();
@@ -388,12 +396,13 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
   if (file == NULL)
   {
     printf("load: %s: open failed\n", file_name);
+    lock_release(&file_lock);
     goto done;
   }
   /* load(excutable file open) 성공 시 실행 파일에 쓰기 방지 설정 */
   file_deny_write(file);        // 실행 파일에 대한 쓰기 방지
   t->excute_file_name = file;   // process_exit 때 접근 가능하도록 file 주소 저장
-
+  lock_release(&file_lock);
   /* Read and verify executable header. */
   if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\1\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 3 || ehdr.e_version != 1 || ehdr.e_phentsize != sizeof(struct Elf32_Phdr) || ehdr.e_phnum > 1024)
   {
@@ -458,7 +467,6 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
       break;
     }
   }
-
   /* Set up stack. */
   if (!setup_stack(esp))
     goto done;
@@ -470,19 +478,22 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
 
 done:
   /* We arrive here whether the load is successful or not. */
-  lock_release(&file_lock);
   return success;
 }
 
 /* Create a minimal stack by mapping a zeroed page at the top of user virtual memory. */
 static bool setup_stack(void **esp)
 {
-  uint8_t *kpage = frame_allocate(PAL_USER | PAL_ZERO, (uint8_t *)PHYS_BASE - PGSIZE);
+  lock_acquire(&frame_lock);
 
-  if (!kpage)
+  uint8_t *kpage = frame_allocate(PAL_USER | PAL_ZERO, (uint8_t *)PHYS_BASE - PGSIZE);
+  if (!kpage) {
+    lock_release(&frame_lock);
     return false;
+  }
   
   if(!install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true)){
+    lock_release(&frame_lock);
     frame_deallocate(kpage);
     return false;
   }
@@ -491,11 +502,13 @@ static bool setup_stack(void **esp)
   struct thread *cur = thread_current();
   if (!spt_add_page(&cur->spt, ((uint8_t *)PHYS_BASE) - PGSIZE, NULL, 0, 0, PGSIZE, true, PAGE_PRESENT)){
     install_page(((uint8_t *)PHYS_BASE) - PGSIZE, NULL, false); // Rollback SPT when fail
+    lock_release(&frame_lock);
     frame_deallocate(kpage);
     return false;
   }
 
-  *esp = PHYS_BASE; 
+  *esp = PHYS_BASE;
+  lock_release(&frame_lock);
   return true;
 }
 
@@ -637,6 +650,8 @@ void page_load(struct spt_entry *entry, void *kpage)
     break;
 
   default:
+
+    lock_release(&frame_lock);
     frame_deallocate(kpage);
     exit(-1);
   }
@@ -646,6 +661,8 @@ void map_page(struct spt_entry *entry, void *upage, void *kpage, struct thread *
 {
   if (!pagedir_set_page(cur->pagedir, upage, kpage, entry->writable))
   {
+
+    lock_release(&frame_lock);
     frame_deallocate(kpage);
     exit(-1);
   }
@@ -678,7 +695,6 @@ static void page_file(struct spt_entry *entry, void *kpage)
     exit(-1);
   }
   memset(kpage + entry->page_read_bytes, 0, entry->page_zero_bytes);
-
   if (!was_holding_lock)
     lock_release(&file_lock);
 }

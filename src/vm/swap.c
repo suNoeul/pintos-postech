@@ -34,6 +34,7 @@ void swap_table_init(void)
 size_t swap_out(const void *frame)
 {
     /* 사용 가능한 Swap Slot 찾기 */
+    ASSERT(!lock_held_by_current_thread(&swap_lock));
     lock_acquire(&swap_lock);
     size_t slot_idx = bitmap_scan_and_flip(swap_table.used_slots, 0, 1, false);
     lock_release(&swap_lock);
@@ -59,6 +60,7 @@ void swap_in(size_t swap_index, void *frame)
         block_read(swap_table.swap_disk, swap_index * (PGSIZE / BLOCK_SECTOR_SIZE) + i, (uint8_t *)frame + i * BLOCK_SECTOR_SIZE);
 
     /* Swap Slot 비트맵 갱신 */
+    ASSERT(!lock_held_by_current_thread(&swap_lock));
     lock_acquire(&swap_lock);
     swap_free_slot(swap_index);
     lock_release(&swap_lock);
@@ -73,10 +75,10 @@ void swap_free_slot(size_t swap_index)
     swap_table.slot_count++;
 }
 
-bool swap_is_slot_in_use(size_t swap_index)
-{
-    ASSERT(swap_index < bitmap_size(swap_table.used_slots));
+// bool swap_is_slot_in_use(size_t swap_index)
+// {
+//     ASSERT(swap_index < bitmap_size(swap_table.used_slots));
 
-    /* 해당 Swap Slot의 사용 여부 반환 */
-    return bitmap_test(swap_table.used_slots, swap_index);
-}
+//     /* 해당 Swap Slot의 사용 여부 반환 */
+//     return bitmap_test(swap_table.used_slots, swap_index);
+// }
