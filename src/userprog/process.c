@@ -178,7 +178,6 @@ static void start_process(void *file_name_)
     palloc_free_page(file_name);
     thread_exit();
   }
-  printf("dudus\n");
 
   /* User Program 실행 전 Stack Argument Setting */
   argument_passing(argv, argc, &if_.esp);
