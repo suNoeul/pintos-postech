@@ -28,6 +28,6 @@ void swap_in(size_t swap_index, void *frame);
 
 /* Swap Slot 초기화 및 관리 함수 */
 void swap_free_slot(size_t swap_index);         
-bool swap_is_slot_in_use(size_t swap_index);    
+// bool swap_is_slot_in_use(size_t swap_index);    
 
 #endif /* SWAP_H */

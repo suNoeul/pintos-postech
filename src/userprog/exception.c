@@ -181,7 +181,7 @@ static void page_fault(struct intr_frame *f)
 
    void *kpage = frame_allocate(PAL_USER, upage);
    load_page(entry, kpage);
-   map_page(entry, upage, kpage, cur);
+   map_page(cur, upage, kpage, entry);
 }
 
 static bool is_stack_access(void *esp, void *fault_addr)

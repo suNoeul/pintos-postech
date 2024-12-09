@@ -642,7 +642,7 @@ void load_page(struct spt_entry *entry, void *kpage)
   }
 }
 
-void map_page(struct spt_entry *entry, void *upage, void *kpage, struct thread *cur)
+void map_page(struct thread *cur, void *upage, void *kpage, struct spt_entry *entry)
 {
   if (!pagedir_set_page(cur->pagedir, upage, kpage, entry->writable))
   {

@@ -86,17 +86,19 @@ static void syscall_handler(struct intr_frame *f)
       seek(*(int *)(f->esp + 4), *(unsigned *)(f->esp + 8));
       break;
     case SYS_TELL:
-      check_address(f->esp);
+      check_address(f->esp+4);
       f->eax = tell(*(int *)(f->esp + 4));
       break;
     case SYS_CLOSE:
-      check_address(f->esp);
+      check_address(f->esp+4);
       close(*(int *)(f->esp + 4));
       break;
     case SYS_MMAP:
+      check_address(f->esp+4);
       f->eax = mmap(*(int *)(f->esp + 4), *(void **)(f->esp + 8));
       break;
     case SYS_MUNMAP:
+      check_address(f->esp+4);
       munmap(*(mapid_t *)(f->esp + 4));
       break;
     default:

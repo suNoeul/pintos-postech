@@ -17,6 +17,6 @@ void  process_activate (void);
 /* For project 3 */
 struct spt_entry *grow_stack(void *esp, void *fault_addr, struct thread *cur);
 void load_page(struct spt_entry *entry, void *kpage);
-void map_page(struct spt_entry *entry, void *upage, void *kpage, struct thread *cur);
+void map_page(struct thread *cur, void *upage, void *kpage, struct spt_entry *entry);
 
 #endif /* userprog/process.h */
