@@ -487,11 +487,13 @@ static bool setup_stack(void **esp)
   uint8_t *kpage = frame_allocate(PAL_USER | PAL_ZERO, (uint8_t *)PHYS_BASE - PGSIZE);
 
   if (!kpage) {
+    printf("4\n");
     lock_release(&frame_lock);
     return false;
   }
   
   if(!install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true)){
+    printf("5\n");
     lock_release(&frame_lock);
     frame_deallocate(kpage);
     return false;
@@ -501,12 +503,14 @@ static bool setup_stack(void **esp)
   struct thread *cur = thread_current();
   if (!spt_add_page(&cur->spt, ((uint8_t *)PHYS_BASE) - PGSIZE, NULL, 0, 0, PGSIZE, true, PAGE_PRESENT)){
     install_page(((uint8_t *)PHYS_BASE) - PGSIZE, NULL, false); // Rollback SPT when fail
+    printf("6\n");
     lock_release(&frame_lock);
     frame_deallocate(kpage);
     return false;
   }
 
   *esp = PHYS_BASE;
+  printf("7\n");
   lock_release(&frame_lock);
   return true;
 }
@@ -649,6 +653,7 @@ void page_load(struct spt_entry *entry, void *kpage)
     break;
 
   default:
+    printf("8\n");
     lock_release(&frame_lock);
     frame_deallocate(kpage);
     exit(-1);
@@ -659,6 +664,7 @@ void map_page(struct spt_entry *entry, void *upage, void *kpage, struct thread *
 {
   if (!pagedir_set_page(cur->pagedir, upage, kpage, entry->writable))
   {
+    printf("9\n");
     lock_release(&frame_lock);
     frame_deallocate(kpage);
     exit(-1);

@@ -184,12 +184,15 @@ static void page_fault(struct intr_frame *f)
          entry = grow_stack(esp, fault_addr, cur);
       else
       {
+         printf("2\n");
+         lock_release(&frame_lock);
          exit(-101);
       }     
    }
    void *kpage = frame_allocate(PAL_USER, upage);
    page_load(entry, kpage);
    map_page(entry, upage, kpage, cur);
+   printf("3\n");
    lock_release(&frame_lock);
 }
 
