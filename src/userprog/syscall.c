@@ -61,7 +61,6 @@ static void syscall_handler(struct intr_frame *f)
       break;
     case SYS_OPEN:
       f->eax = open(*(const char **)(f->esp + 4));
-      printf("dudufile:<%x>", f->eax);
       break;
     case SYS_FILESIZE:
       check_address(f->esp + 4);
@@ -211,7 +210,6 @@ int read(int fd, void *buffer, unsigned size)
     exit(-100);
   }
   unsigned int count;
-  frame_pin(buffer);
 
   /* 1(STDOUT_FILENO) */
   if (fd == STDOUT_FILENO) 
@@ -232,7 +230,6 @@ int read(int fd, void *buffer, unsigned size)
     if(file != NULL){
       lock_acquire(&file_lock);
       count = file_read(file, buffer, size);
-      frame_unpin(buffer);
       lock_release(&file_lock);
       return count;
     }
