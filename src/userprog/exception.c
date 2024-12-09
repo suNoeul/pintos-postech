@@ -193,7 +193,8 @@ static void page_fault(struct intr_frame *f)
    page_load(entry, kpage);
    map_page(entry, upage, kpage, cur);
    printf("3\n");
-   lock_release(&frame_lock);
+   if(lock_held_by_current_thread(&frame_lock))
+      lock_release(&frame_lock);
 }
 
 bool is_stack_access(void *esp, void *fault_addr)
