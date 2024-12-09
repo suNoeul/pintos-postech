@@ -179,7 +179,7 @@ static void page_fault(struct intr_frame *f)
    if (entry == NULL)
    {
       if (is_stack_access(esp, fault_addr))
-         entry = grow_stack(esp, fault_addr, cur);
+         entry = grow_stack(fault_addr, cur);
       else
       {
          lock_release(&frame_lock);
@@ -210,7 +210,7 @@ bool is_stack_access(void *esp, void *fault_addr)
    }
 
    // fault_addr가 스택 확장 조건을 만족하는지 확인
-   if (fault_addr >= (uint8_t *)esp - 32)
+   if ((uint8_t *)fault_addr >= (uint8_t *)esp - 32)
    {
       return true;
    }
