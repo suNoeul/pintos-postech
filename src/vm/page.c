@@ -24,7 +24,7 @@ void spt_destructor(struct hash_elem *e, void *aux UNUSED)
     struct spt_entry *entry = hash_entry(e, struct spt_entry, hash_elem);
     uint32_t *pagedir = thread_current()->pagedir;
     if(entry) {
-        if (entry->status == PAGE_PRESENT || entry->status == PAGE_ZERO) {
+        if (entry->status == PAGE_PRESENT) {
             frame_deallocate (pagedir_get_page(pagedir, entry->upage));
             pagedir_clear_page(pagedir, entry->upage);
         }
