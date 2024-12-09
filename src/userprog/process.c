@@ -483,7 +483,6 @@ done:
 /* Create a minimal stack by mapping a zeroed page at the top of user virtual memory. */
 static bool setup_stack(void **esp)
 {
-  printf("frame_setup\n");
   lock_acquire(&frame_lock);
   uint8_t *kpage = frame_allocate(PAL_USER | PAL_ZERO, (uint8_t *)PHYS_BASE - PGSIZE);
 
@@ -681,13 +680,10 @@ static void page_swap(struct spt_entry *entry, void *kpage)
 static void page_file(struct spt_entry *entry, void *kpage)
 {
   bool was_holding_lock = lock_held_by_current_thread(&file_lock);
-  printf("frame_handle111\n");
 
   if (!was_holding_lock)
     lock_acquire(&file_lock);
-  printf("frame_handle112\n");
   file_seek(entry->file, entry->ofs);
-  printf("frame_handle113\n");
   if (file_read(entry->file, kpage, entry->page_read_bytes) != (int)entry->page_read_bytes)
   {
     frame_deallocate(kpage);
@@ -695,9 +691,7 @@ static void page_file(struct spt_entry *entry, void *kpage)
       lock_release(&file_lock);
     exit(-1);
   }
-  printf("frame_handle114\n");
   memset(kpage + entry->page_read_bytes, 0, entry->page_zero_bytes);
-  printf("frame_handle115\n");
   if (!was_holding_lock)
     lock_release(&file_lock);
 }

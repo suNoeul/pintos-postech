@@ -174,7 +174,6 @@ static void page_fault(struct intr_frame *f)
       }
       exit(-1);
    }
-   printf("frame_handle\n");
    lock_acquire(&frame_lock);
 
    struct spt_entry *entry = spt_find_page(&cur->spt, fault_addr);
@@ -186,11 +185,8 @@ static void page_fault(struct intr_frame *f)
          lock_release(&frame_lock);
          exit(-101);
    }
-   printf("frame_handle22\n");
    void *kpage = frame_allocate(PAL_USER, upage);
-   printf("frame_handle33\n");
    page_load(entry, kpage);
-   printf("frame_handle44\n");
    map_page(entry, upage, kpage, cur);
    lock_release(&frame_lock);
 }
