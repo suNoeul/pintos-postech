@@ -245,7 +245,10 @@ void process_exit(void)
   /* Project3 */
   for (int i = 0; i < cur->mapid; i++)
     munmap(i);      
+  lock_acquire(&frame_lock);
   spt_destroy(&cur->spt);
+  lock_release(&frame_lock);
+  
   
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */

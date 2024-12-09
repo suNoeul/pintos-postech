@@ -52,7 +52,7 @@ void frame_deallocate(void *frame)
     struct frame_table_entry *fte;
     struct list_elem *e;
 
-    lock_acquire(&frame_lock);
+    // lock_acquire(&frame_lock);
     for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))    {
         fte = list_entry(e, struct frame_table_entry, elem);
         if (fte->frame == frame) {
@@ -65,7 +65,7 @@ void frame_deallocate(void *frame)
             break;
         }
     }
-    lock_release(&frame_lock);
+    // lock_release(&frame_lock);
 }
 
 bool frame_evict(void) 

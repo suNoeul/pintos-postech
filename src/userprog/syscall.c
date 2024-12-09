@@ -322,36 +322,31 @@ mapid_t mmap(int fd, void *addr)
 void munmap(mapid_t mapping)
 {
   struct thread *cur = thread_current();
-  if (mapping >= cur->mapid)
-    return;
   struct mmt_entry *entry = mmt_find_entry(&cur->mmt, mapping);
-  if(entry == NULL)
+  
+  if (mapping >= cur->mapid || entry == NULL)
     return;
-  void *upage = entry->upage;
 
-  off_t ofs;
+  off_t size = file_length(entry->file);
+  void *upage = entry->upage;
   struct spt_entry *spte;
 
+
   lock_acquire(&file_lock);
-  off_t size = file_length(entry->file);
-  for (ofs = 0; ofs < size; ofs += PGSIZE)
-  {
+  for (off_t ofs = 0; ofs < size; ofs += PGSIZE, upage += PGSIZE) {
     spte = spt_find_page(&cur->spt, upage);
+    
     //dirty인 경우 WB
     void *kpage = pagedir_get_page(cur->pagedir, upage);
-    if (pagedir_is_dirty(cur->pagedir, upage))
-    {
+    if (pagedir_is_dirty(cur->pagedir, upage))    
       file_write_at(spte->file, kpage, spte-> page_read_bytes, spte->ofs);
-    }
+    
     uint32_t *pagedir = thread_current()->pagedir;
-    if (spte->status == PAGE_PRESENT)
-    {
+    if (spte->status == PAGE_PRESENT) {
       pagedir_clear_page(pagedir, upage);
       frame_deallocate(kpage);
     }
     spt_remove_page(&cur->spt, spte->upage);
-    
-    upage += PGSIZE;
   }
   hash_delete(&cur->mmt, &entry->hash_elem);
   free(entry);
