@@ -236,10 +236,9 @@ void process_exit(void)
   struct thread *cur = thread_current();
   uint32_t *pd;
 
+  /* Project3 */
   for (int i = 0; i < cur->mapid; i++)
     munmap(i);
-
-  /* Project3 */
   spt_destroy(&thread_current()->spt);
 
   /* Destroy the current process's page directory and switch back

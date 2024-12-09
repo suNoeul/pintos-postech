@@ -24,9 +24,13 @@ void spt_destructor(struct hash_elem *e, void *aux UNUSED)
     struct spt_entry *entry = hash_entry(e, struct spt_entry, hash_elem);
     uint32_t *pagedir = thread_current()->pagedir;
     if(entry) {
-        if(entry->status == PAGE_PRESENT) {
-            remove_frame_entry(pagedir_get_page(pagedir, entry->upage));
+        if (entry->status == PAGE_PRESENT || entry->status == PAGE_ZERO) {
+            frame_deallocate (pagedir_get_page(pagedir, entry->upage));
+            pagedir_clear_page(pagedir, entry->upage);
         }
+
+        if (entry->status == PAGE_SWAP)
+            swap_free_slot(entry->swap_index);  
     }
     free(entry);
 }
@@ -128,16 +132,9 @@ void mmt_destroy(struct hash *mmt)
 
 void mmt_destructor(struct hash_elem *e, void *aux UNUSED)
 {
-    struct spt_entry *entry = hash_entry(e, struct mmt_entry, hash_elem);
-    uint32_t *pagedir = thread_current()->pagedir;
-    if (entry)
-    {
-        if (entry->status == PAGE_PRESENT)
-        {
-            remove_frame_entry(pagedir_get_page(pagedir, entry->upage));
-        }
-    }
-    free(entry);
+    struct mmt_entry *entry = hash_entry(e, struct mmt_entry, hash_elem);
+    if (entry != NULL) 
+        munmap(entry->mmap_id);     
 }
 
 struct mmt_entry *mmt_find_entry(struct hash *mmt, mapid_t mmap_id)
