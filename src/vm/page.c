@@ -6,6 +6,7 @@
 #include "filesys/file.h"
 #include "lib/user/syscall.h"
 #include "vm/frame.h"
+#include "vm/swap.h"
 
 /* SPT function Definition*/
 void spt_init(struct hash *spt)
@@ -53,10 +54,14 @@ void spt_remove_page(struct hash *spt, void *upage)
         struct spt_entry *removed_entry = hash_entry(e, struct spt_entry, hash_elem);
         uint32_t *pagedir = thread_current()->pagedir;
 
-        if (removed_entry->status == PAGE_PRESENT)
+        if (removed_entry->status == PAGE_PRESENT){
             frame_deallocate (pagedir_get_page(pagedir, removed_entry->upage));
+            pagedir_clear_page(pagedir, removed_entry->upage);
+        }
+
+        if (removed_entry->status == PAGE_SWAP)
+            swap_free_slot(removed_entry->swap_index);        
         
-        pagedir_clear_page(pagedir, removed_entry->upage);
         free(removed_entry);
     }         
 }

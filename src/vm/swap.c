@@ -20,7 +20,7 @@ void swap_table_init(void)
 
     /* Swap Bitmap 초기화 */
     size_t swap_size = block_size(swap_table.swap_disk) / (PGSIZE / BLOCK_SECTOR_SIZE); 
-    swap_table.slot_count = swap_size;                  // 슬롯 개수만큼 비트맵 생성
+    swap_table.slot_count = swap_size;                  
     swap_table.used_slots = bitmap_create(swap_size);
     if (swap_table.used_slots == NULL)
         PANIC("Failed to create swap table!");
