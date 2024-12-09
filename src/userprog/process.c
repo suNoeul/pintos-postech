@@ -178,6 +178,7 @@ static void start_process(void *file_name_)
     palloc_free_page(file_name);
     thread_exit();
   }
+  printf("dudus\n");
 
   /* User Program 실행 전 Stack Argument Setting */
   argument_passing(argv, argc, &if_.esp);
@@ -487,7 +488,6 @@ static bool setup_stack(void **esp)
   lock_acquire(&frame_lock);
 
   uint8_t *kpage = frame_allocate(PAL_USER | PAL_ZERO, (uint8_t *)PHYS_BASE - PGSIZE);
-  printf("dududu\n");
   if (!kpage) {
 
     lock_release(&frame_lock);
@@ -512,7 +512,6 @@ static bool setup_stack(void **esp)
   }
 
   *esp = PHYS_BASE;
-  printf("dudu122du\n");
   lock_release(&frame_lock);
   return true;
 }
