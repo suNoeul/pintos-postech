@@ -506,7 +506,6 @@ static bool setup_stack(void **esp)
     frame_deallocate(kpage);
     return false;
   }
-  printf("setup complete<%x>\n", cur);
 
   *esp = PHYS_BASE;
   lock_release(&frame_lock);

@@ -164,8 +164,6 @@ static void page_fault(struct intr_frame *f)
    struct thread *cur = thread_current();
    void *esp = user ? f->esp : cur->esp;
    void *upage = pg_round_down(fault_addr);
-   printf("page_fault <%x>\n", cur);
-   printf("setup complete1<%x>\n", fault_addr);
 
    if (is_kernel_vaddr(fault_addr) || !not_present)
    {
@@ -173,7 +171,7 @@ static void page_fault(struct intr_frame *f)
       {
          lock_release(&frame_lock);
       }
-      exit(-20);
+      exit(-1);
    }
    lock_acquire(&frame_lock);
 
@@ -185,7 +183,7 @@ static void page_fault(struct intr_frame *f)
       else
       {
          lock_release(&frame_lock);
-         exit(-91);
+         exit(-1);
       }     
    }
    void *kpage = frame_allocate(PAL_USER, upage);

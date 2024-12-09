@@ -207,7 +207,7 @@ int read(int fd, void *buffer, unsigned size)
 {
   if (buffer == NULL || !is_user_vaddr(buffer) || !is_user_vaddr(buffer + size - 1))
   {
-    exit(-100);
+    exit(-1);
   }
   unsigned int count;
 
