@@ -184,7 +184,7 @@ static void page_fault(struct intr_frame *f)
       else
       {
          lock_release(&frame_lock);
-         exit(-101);
+         exit(-1);
       }     
    }
    void *kpage = frame_allocate(PAL_USER, upage);
