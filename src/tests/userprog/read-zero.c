@@ -14,8 +14,8 @@ test_main (void)
   CHECK ((handle = open ("sample.txt")) > 1, "open \"sample.txt\"");
 
   buf = 123;
+  msg("duud<%x>", buf);
   byte_cnt = read (handle, &buf, 0);
-  msg("duud<%s>", buf);
   if (byte_cnt != 0)
     fail ("read() returned %d instead of 0", byte_cnt);
   else if (buf != 123)
