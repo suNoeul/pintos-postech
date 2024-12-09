@@ -62,6 +62,7 @@ void mmt_destructor(struct hash_elem *e, void *aux UNUSED);
 
 /* func of manage MMT entry */
 struct mmt_entry *mmt_find_entry(struct hash *mmt, mapid_t mmap_id);
+bool mmt_check_overlap(struct hash *spt, void *addr, off_t size);
 bool mmt_add_page(struct hash *mmt, mapid_t id, struct file *file, void *upage);
 
 /* File MMT entry hash func */

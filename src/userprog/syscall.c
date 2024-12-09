@@ -296,28 +296,38 @@ void close(int fd)
 /* [Project3] Handler functions according to syscall_number */
 mapid_t mmap(int fd, void *addr)
 {
-  if(addr == NULL || addr != pg_round_down(addr))
-  {
-    return MAP_FAILED;
-  }
   struct thread *cur = thread_current();
   struct file *file = get_file_from_fd(fd);
-  if (file == NULL)
-    return MAP_FAILED;
-  lock_acquire(&file_lock);
   struct file *reopen_file;
+  mapid_t mapid;
+
+
+  /* Case 1, 2 : fd == 0 or 1, file_size == 0 */
+  if (file == NULL || file_length(file) == 0)   
+    return MAP_FAILED;
+
+  /* Case 3, 4 : addr == 0, Not page-aligned */
+  if(addr == NULL || addr != pg_round_down(addr))
+    return MAP_FAILED;  
+  
+  /* Case 5 : Check mapping overrap */
+  if(!mmt_check_overlap(&cur->spt, addr, file_length(file)))
+    return MAP_FAILED;  
+
+  lock_acquire(&file_lock);  
   reopen_file = file_reopen(file);
-  if (reopen_file == NULL)
-  {
+  if (reopen_file == NULL) {
     lock_release(&file_lock);
     return MAP_FAILED;
   }
-  mapid_t mapid = cur->mapid++;
+  mapid = cur->mapid++;
   if (!mmt_add_page(&cur->mmt, mapid, reopen_file, addr)){
+    file_close(reopen_file);
     lock_release(&file_lock);
     return MAP_FAILED;
   }
   lock_release(&file_lock);
+
   return mapid;
 }
 

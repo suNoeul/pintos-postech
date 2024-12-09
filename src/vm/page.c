@@ -75,10 +75,9 @@ void spt_cleanup_partial(struct hash *spt, void *upage_start)
     while (hash_next(&it)) {
         entry = hash_entry(hash_cur(&it), struct spt_entry, hash_elem);
 
-        // 현재 페이지가 upage_start 이후의 주소인지 확인
+        /* 현재 페이지가 upage_start 이후의 주소인지 확인 */
         if (entry->upage >= upage_start) {
-            hash_delete(spt, &entry->hash_elem);
-            free(entry); 
+            spt_remove_page(spt, entry->upage); 
         }
     }
 }
@@ -87,9 +86,7 @@ bool spt_add_page(struct hash *spt, void *upage, struct file *file,
                   off_t ofs, size_t page_read_bytes, size_t page_zero_bytes, bool writable, int status)
 {
     struct spt_entry *entry = malloc(sizeof(struct spt_entry));
-    
-    if (entry == NULL)
-        return false;
+    if (entry == NULL) return false;
 
     entry->status = status;
     entry->upage = upage;
@@ -153,33 +150,44 @@ struct mmt_entry *mmt_find_entry(struct hash *mmt, mapid_t mmap_id)
     return e != NULL ? hash_entry(e, struct mmt_entry, hash_elem) : NULL;
 }
 
+bool mmt_check_overlap(struct hash *spt, void *addr, off_t size)
+{
+    for (off_t ofs = 0; ofs < size; ofs += PGSIZE) {
+        if (spt_find_entry(spt, addr + ofs)) 
+            return false; // When, find overlap        
+    }
+    return true; 
+}
+
 bool mmt_add_page(struct hash* mmt, mapid_t id, struct file *file, void *upage)
 {
     struct mmt_entry *entry = (struct mmt_entry *)malloc(sizeof *entry);
-    entry->mmap_id = id;
-    entry->file = file;
-    entry->upage = upage;
-    off_t ofs;
+    if (entry == NULL) return false;
+    
     struct hash *spt = &thread_current()->spt;
     int size = file_length(file);
-
-    for (ofs = 0; ofs < size; ofs += PGSIZE)
-    {
-        if(spt_find_entry(spt, upage)){
-            return false;
-        }
-    }
     size_t page_read_bytes, page_zero_bytes;
+    void *start_upage = upage; 
+    off_t ofs;
 
-    for (ofs = 0; ofs < size; ofs += PGSIZE)
-    {
+    entry->upage = upage;
+    entry->mmap_id = id;
+    entry->file = file;
+
+    for (ofs = 0; ofs < size; ofs += PGSIZE) {
         page_read_bytes = ofs + PGSIZE < size ? PGSIZE : size - ofs;
         page_zero_bytes = PGSIZE - page_read_bytes;
-        spt_add_page(spt, upage, file, ofs, page_read_bytes, page_zero_bytes, true, PAGE_FILE);
+
+        if(!spt_add_page(spt, upage, file, ofs, page_read_bytes, page_zero_bytes, true, PAGE_FILE)){
+            spt_cleanup_partial(spt, start_upage);
+            free(entry);
+            return false;
+        }
         upage += PGSIZE;
     }
+
     struct hash_elem *result = hash_insert(mmt, &entry->hash_elem);
-    return result == NULL; // NULL 반환 시 성공적으로 삽입된 것
+    return result == NULL;
 }
 
 unsigned mmt_hash_func(const struct hash_elem *e, void *aux)
