@@ -184,7 +184,6 @@ static void page_fault(struct intr_frame *f)
          entry = grow_stack(esp, fault_addr, cur);
       else
       {
-         lock_release(&frame_lock);
          exit(-101);
       }     
    }
