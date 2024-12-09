@@ -488,13 +488,11 @@ static bool setup_stack(void **esp)
 
   uint8_t *kpage = frame_allocate(PAL_USER | PAL_ZERO, (uint8_t *)PHYS_BASE - PGSIZE);
   if (!kpage) {
-
     lock_release(&frame_lock);
     return false;
   }
   
   if(!install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true)){
-
     lock_release(&frame_lock);
     frame_deallocate(kpage);
     return false;

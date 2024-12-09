@@ -36,7 +36,7 @@ void *frame_allocate(enum palloc_flags flags, void *upage)
     // frame_table_add_entry(frame, upage);
 
     if (frame != NULL) {
-        ASSERT(frame_table_add_entry(frame, upage));
+        frame_table_add_entry(frame, upage);
     }
     else 
     { // Frame allocation 실패 시, Evict Frame 호출       
@@ -45,7 +45,7 @@ void *frame_allocate(enum palloc_flags flags, void *upage)
             ASSERT(false);
         }
         frame = palloc_get_page(flags);
-        ASSERT(frame_table_add_entry(frame, upage));
+        frame_table_add_entry(frame, upage);
     }
     ASSERT(frame != NULL);
     return frame;

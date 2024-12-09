@@ -173,6 +173,7 @@ bool remove(const char *file)
 int open(const char *file)
 {
   check_address(file);
+  printf("dudufile:<%s>", file);
 
   lock_acquire(&file_lock);
   struct file *f = filesys_open(file);
