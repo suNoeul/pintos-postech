@@ -165,6 +165,7 @@ static void page_fault(struct intr_frame *f)
    void *esp = user ? f->esp : cur->esp;
    void *upage = pg_round_down(fault_addr);
    printf("page_fault <%x>\n", cur);
+   printf("setup complete<%x>\n", fault_addr);
 
    if (is_kernel_vaddr(fault_addr) || !not_present)
    {
