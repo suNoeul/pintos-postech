@@ -242,7 +242,11 @@ void process_exit(void)
   if (lock_held_by_current_thread(&file_lock))
     lock_release(&file_lock);
   if (lock_held_by_current_thread(&frame_lock))
+  {
+    printf("100\n");
     lock_release(&frame_lock);
+  }
+    
   /* Project3 */
   spt_destroy(&cur->spt);
   
