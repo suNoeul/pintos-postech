@@ -31,6 +31,7 @@ void spt_destructor(struct hash_elem *e, void *aux UNUSED)
             pagedir_clear_page(pagedir, entry->upage);
         }
         else if(entry->status == PAGE_SWAP) {
+            ASSERT(entry->swap_index != -1);
             swap_free_slot(entry->swap_index);
             entry->swap_index = -1;
         }
@@ -103,13 +104,13 @@ bool spt_add_page(struct hash *spt, void *upage, struct file *file,
     return result == NULL; // NULL 반환 시 성공적으로 삽입된 것
 }
 
-unsigned spt_hash_func(const struct hash_elem *e, void *aux UNUSED)
+unsigned spt_hash_func(const struct hash_elem *e, void *aux)
 {
     const struct spt_entry *entry = hash_entry(e, struct spt_entry, hash_elem);
     return hash_bytes(&entry->upage, sizeof(entry->upage));
 }
 
-bool spt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux UNUSED)
+bool spt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux)
 {
     const struct spt_entry *entry_a = hash_entry(a, struct spt_entry, hash_elem);
     const struct spt_entry *entry_b = hash_entry(b, struct spt_entry, hash_elem);
@@ -130,12 +131,25 @@ void mmt_destroy(struct hash *mmt)
 
 void mmt_destructor(struct hash_elem *e, void *aux UNUSED)
 {
-    struct mmt_entry *entry = hash_entry(e, struct mmt_entry, hash_elem);
-    if (entry != NULL) 
-        munmap(entry->mmap_id);   
+    struct spt_entry *entry = hash_entry(e, struct mmt_entry, hash_elem);
+    uint32_t *pagedir = thread_current()->pagedir;
+    if (entry)
+    {
+        if (entry->status == PAGE_PRESENT)
+        {
+            ASSERT(pagedir != NULL);
+            // frame_pin(pagedir_get_page(pagedir, entry->upage));
+        }
+        if (entry->status == PAGE_SWAP)
+        {
+            swap_free_slot(entry->swap_index);
+            entry->swap_index = -1;
+        }
+    }
+    free(entry);
 }
 
-struct mmt_entry *mmt_find_entry(struct hash *mmt, mapid_t mmap_id)
+struct mmt_entry *mmt_find_entry(struct hash *mmt, mapid_t *mmap_id)
 {
     struct mmt_entry entry;
     struct hash_elem *e;
@@ -174,13 +188,13 @@ bool mmt_add_page(struct hash* mmt, mapid_t id, struct file *file, void *upage)
     return result == NULL; // NULL 반환 시 성공적으로 삽입된 것
 }
 
-unsigned mmt_hash_func(const struct hash_elem *e, void *aux UNUSED)
+unsigned mmt_hash_func(const struct hash_elem *e, void *aux)
 {
     const struct mmt_entry *entry = hash_entry(e, struct mmt_entry, hash_elem);
     return hash_bytes(&entry->mmap_id, sizeof(entry->mmap_id));
 }
 
-bool mmt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux UNUSED)
+bool mmt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux)
 {
     const struct mmt_entry *entry_a = hash_entry(a, struct mmt_entry, hash_elem);
     const struct mmt_entry *entry_b = hash_entry(b, struct mmt_entry, hash_elem);

@@ -15,7 +15,7 @@ void  process_exit (void);
 void  process_activate (void);
 
 /* For project 3 */
-struct spt_entry *grow_stack(void *fault_addr, struct thread *cur);
+struct spt_entry *grow_stack(void *esp, void *fault_addr, struct thread *cur);
 void page_load(struct spt_entry *entry, void *kpage);
 void map_page(struct spt_entry *entry, void *upage, void *kpage, struct thread *cur);
 

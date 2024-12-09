@@ -6,7 +6,6 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "threads/synch.h"
-#include "threads/malloc.h"
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
 #include "devices/shutdown.h"
@@ -332,6 +331,7 @@ void munmap(mapid_t mapping)
   void *upage = entry->upage;
   struct spt_entry *spte;
 
+
   lock_acquire(&file_lock);
   for (off_t ofs = 0; ofs < size; ofs += PGSIZE, upage += PGSIZE) {
     spte = spt_find_page(&cur->spt, upage);
@@ -356,7 +356,7 @@ void munmap(mapid_t mapping)
 /* Additional user-defined functions */
 void check_address(const void *addr)
 {
-  if (addr == NULL ||!is_user_vaddr(addr) || spt_find_page(&thread_current()->spt ,  (void *)addr) == NULL)
+  if (addr == NULL ||!is_user_vaddr(addr) || spt_find_page(&thread_current()->spt ,  addr) == NULL)
   {
     exit(-1);
   }

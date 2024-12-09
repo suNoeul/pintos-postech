@@ -627,7 +627,7 @@ static bool install_page(void *upage, void *kpage, bool writable)
 }
 
 /* For Project 3 - Virtual Memory */
-struct spt_entry *grow_stack(void *fault_addr, struct thread *cur)
+struct spt_entry *grow_stack(void *esp, void *fault_addr, struct thread *cur)
 {
   void *upage = pg_round_down(fault_addr);
   spt_add_page(&cur->spt, upage, NULL, 0, 0, PGSIZE, true, PAGE_ZERO);
