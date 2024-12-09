@@ -170,7 +170,6 @@ static void page_fault(struct intr_frame *f)
    {
       if (lock_held_by_current_thread(&frame_lock))
       {
-         printf("1\n");
          lock_release(&frame_lock);
       }
       exit(-1);
@@ -184,7 +183,6 @@ static void page_fault(struct intr_frame *f)
          entry = grow_stack(esp, fault_addr, cur);
       else
       {
-         printf("2\n");
          lock_release(&frame_lock);
          exit(-101);
       }     
@@ -193,7 +191,6 @@ static void page_fault(struct intr_frame *f)
    page_load(entry, kpage);
    map_page(entry, upage, kpage, cur);
    if(lock_held_by_current_thread(&frame_lock)) {
-      printf("3\n");
       lock_release(&frame_lock);
    }
       

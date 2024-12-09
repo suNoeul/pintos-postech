@@ -212,7 +212,7 @@ void frame_table_all_frame_owner(struct thread* owner)
             e = list_next(e);
         }
     }
-    printf("11\n");
+
     lock_release(&frame_lock);
 }
 
@@ -265,12 +265,12 @@ struct frame_table_entry* frame_find_entry(void * kpage) {
         fte = list_entry(e, struct frame_table_entry, elem);
         if (fte->frame == kpage)
         {
-            printf("13\n");
+
             lock_release(&frame_lock);
             return fte;
         }
     }
-    printf("14\n");
+
     lock_release(&frame_lock);
     return NULL;
 }
